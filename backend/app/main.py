@@ -1,7 +1,14 @@
 from fastapi import FastAPI
+from fastapi.routing import APIRoute
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="rolegraph", version="0.1.0")
+
+
+def _operation_id(route: APIRoute) -> str:
+    return f"{route.tags[0]}-{route.name}" if route.tags else route.name
+
+
+app = FastAPI(title="rolegraph", version="0.1.0", generate_unique_id_function=_operation_id)
 
 app.add_middleware(
     CORSMiddleware,
@@ -14,3 +21,8 @@ app.add_middleware(
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+from app.spike_routes import router as spike_router  # noqa: E402
+
+app.include_router(spike_router)
