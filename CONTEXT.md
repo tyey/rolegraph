@@ -44,10 +44,62 @@ _Avoid_: Internal agency, HR, in-house recruiters
 An independent recruiting firm that introduces the candidate to Companies. It can work with any number of Companies, and a Process goes through at most one Agency.
 _Avoid_: Headhunter, external recruiter, recruitment firm
 
+### Timelines
+
+**Timeline**:
+The Steps of one Process in date order. Steps may overlap or share a day, and there are no branches between them; undated Planned Steps come after the dated ones, in an order the candidate chooses.
+_Avoid_: History, pipeline, loop
+
+**Step**:
+One interaction within exactly one Process, such as an application, a screening call, an interview, or a decision the Company sends, like an offer or a rejection. It has a Step kind, a day (required once Done, optional while Planned), an optional time of day and an optional end, such as the due day of a take-home.
+_Avoid_: Stage, round, event, interview (for the general case)
+
+**Origin**:
+The Step that started a Process, such as the candidate's application or a recruiter reaching out. Every Process has exactly one, created with it and always first on its Timeline.
+_Avoid_: Source, lead, first contact
+
+**Channel**:
+The route an Origin came through, such as LinkedIn, a job board, a company careers site, email or a referral. Only an Origin has a Channel; rolegraph starts with a set of Channels and the candidate can add, rename and Merge them.
+_Avoid_: Source, medium, platform
+
+**Step kind**:
+What sort of Step it is, such as Application, Screening, Live coding, Take-home, Culture fit or Offer. rolegraph starts with a set of Step kinds; the candidate can add, rename and Merge them, and every Step kind can be reused by any Process.
+_Avoid_: Step type, category
+
+**Planned** / **Done** / **Cancelled**:
+Whether a Step is still to come, has happened, or will not happen. Rescheduling a Planned Step only changes its day or time; a Cancelled Step stays on the Timeline. Closing a Process cancels its remaining Planned Steps, and a Closed Process can gain Done Steps but no Planned ones.
+_Avoid_: Scheduled, completed, deleted
+
+**Prep notes**:
+What the candidate knows and plans in order to prepare, written on a Step or on the Process as a whole. Practice for a Step draws on both, together with the Step's Documents.
+_Avoid_: Prep context, preparation, briefing
+
+**Reflection**:
+The candidate's own account of how a Step went, at most one per Step.
+_Avoid_: Notes, self-feedback, retro
+
+**Feedback**:
+What someone else said about the candidate after a Step, such as an interviewer's comments or the reasons for a rejection. A Step can have several, each with the day it arrived and who gave it.
+_Avoid_: Review, evaluation, reflection
+
+### Documents
+
+**Document**:
+A file kept in rolegraph as an exact copy, such as a CV that was sent or a job description that was received. It is identified by its bytes, so the same file is one Document however many Steps it is attached to, and a changed file is a new Document. Each is marked **Sent** or **Received**.
+_Avoid_: DocumentRef, attachment, file, link
+
+**Document kind**:
+What sort of Document it is, such as CV, Cover letter, Job description, Take-home brief, Take-home submission, Offer letter, Notes or Other. rolegraph starts with a set of Document kinds; the candidate can add, rename and Merge them.
+_Avoid_: Document type, category
+
+**Provenance**:
+The optional record of where a Document was produced, such as the cv-latex commit and path a CV was built at. A Document added by hand has none.
+_Avoid_: Source, origin, link
+
 ### Housekeeping
 
 **Merge**:
-Folding a duplicate Role, Company or Agency into another of the same kind. Everything attached to the folded one moves to the survivor, and the folded one is gone. A folded Company's name becomes one of the survivor's aliases.
+Folding a duplicate Role, Company, Agency, Step kind, Channel or Document kind into another of the same kind. Everything attached to the folded one moves to the survivor, and the folded one is gone. A folded Company's name becomes one of the survivor's aliases.
 _Avoid_: Combine, dedupe
 
 **Reclassify**:
