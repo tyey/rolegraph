@@ -44,6 +44,28 @@ _Avoid_: Internal agency, HR, in-house recruiters
 An independent recruiting firm that introduces the candidate to Companies. It can work with any number of Companies, and a Process goes through at most one Agency.
 _Avoid_: Headhunter, external recruiter, recruitment firm
 
+### People
+
+**Person**:
+A human the candidate deals with during recruitment, such as a recruiter, an interviewer or a hiring manager. There is one Person per human, shared by every Process they take part in, so looking at a Person shows their history across Companies and Agencies and leads back to each of those Processes. A Person may start as a placeholder known only by a description, such as "senior engineer from the platform team", and be named or Merged into the real Person later.
+_Avoid_: Contact, recruiter (for the general case)
+
+**Profile link**:
+A way to reach or recognise a Person, such as a LinkedIn profile URL or an email address. A Person has any number of them. A new Person whose Profile link already belongs to another Person is offered as a match for that Person, while a similar name is only suggested; the candidate decides, and two Persons found to be one human are Merged.
+_Avoid_: Contact details, handle, identifier
+
+**Participant**:
+A Person's place in one Process, saying whom they spoke for there: the Company, its Talent team, the Agency, or no one, as with a friend elsewhere who referred the candidate. A Person has at most one Participant per Process, and a Step lists which of its Process's Participants took part in it; someone who never appears in a Step, such as a hiring manager behind the scenes, can still be a Participant.
+_Avoid_: Involvement, attendee, contact
+
+**Part**:
+What a Participant does in their Process, such as Recruiter, Sourcer, Coordinator, Interviewer, Hiring manager, Team member, Referrer or Executive. A Participant has one or more Parts. rolegraph starts with a set of Parts; the candidate can add, rename and Merge them.
+_Avoid_: Role (that is a kind of job), function, capacity, title
+
+**Decision maker**:
+A Participant the candidate has marked as having a say in whether they are hired in that Process. A Process can have none, one or several, and the mark goes with any Part.
+_Avoid_: Hiring authority, approver, boss
+
 ### Timelines
 
 **Timeline**:
@@ -79,7 +101,7 @@ The candidate's own account of how a Step went, at most one per Step.
 _Avoid_: Notes, self-feedback, retro
 
 **Feedback**:
-What someone else said about the candidate after a Step, such as an interviewer's comments or the reasons for a rejection. A Step can have several, each with the day it arrived and who gave it.
+What someone else said about the candidate after a Step, such as an interviewer's comments or the reasons for a rejection. A Step can have several, each with the day it arrived and who gave it: a Participant of that Process when known, otherwise the Company, its Talent team or the Agency.
 _Avoid_: Review, evaluation, reflection
 
 ### Documents
@@ -99,7 +121,7 @@ _Avoid_: Source, origin, link
 ### Housekeeping
 
 **Merge**:
-Folding a duplicate Role, Company, Agency, Step kind, Channel or Document kind into another of the same kind. Everything attached to the folded one moves to the survivor, and the folded one is gone. A folded Company's name becomes one of the survivor's aliases.
+Folding a duplicate Role, Company, Agency, Person, Part, Step kind, Channel or Document kind into another of the same kind. Everything attached to the folded one moves to the survivor, and the folded one is gone. A folded Company's name becomes one of the survivor's aliases.
 _Avoid_: Combine, dedupe
 
 **Reclassify**:
