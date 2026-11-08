@@ -51,7 +51,7 @@ A human the candidate deals with during recruitment, such as a recruiter, an int
 _Avoid_: Contact, recruiter (for the general case)
 
 **Profile link**:
-A way to reach or recognise a Person, such as a LinkedIn profile URL or an email address. A Person has any number of them. A new Person whose Profile link already belongs to another Person is offered as a match for that Person, while a similar name is only suggested; the candidate decides, and two Persons found to be one human are Merged.
+A way to reach or recognise a Person, such as a LinkedIn profile URL or an email address. A Person has any number of them. A new Person whose Profile link already belongs to another Person is offered as a match for that Person, while a similar name is only suggested; the candidate decides, and two Persons found to be one human are Merged. Several Persons can share a Profile link, such as a shared hiring inbox, so a match is only offered, never forced.
 _Avoid_: Contact details, handle, identifier
 
 **Participant**:
@@ -107,7 +107,7 @@ _Avoid_: Review, evaluation, reflection
 ### Documents
 
 **Document**:
-A file kept in rolegraph as an exact copy, such as a CV that was sent or a job description that was received. It is identified by its bytes, so the same file is one Document however many Steps it is attached to, and a changed file is a new Document. Each is marked **Sent** or **Received**.
+A file kept in rolegraph as an exact copy, such as a CV that was sent or a job description that was received. It is identified by its bytes, so the same file is one Document however many Steps it is attached to, and a changed file is a new Document. Each Step keeps the file name the Document was added under there, so one Document can carry different names on different Steps. Each is marked **Sent** or **Received**.
 _Avoid_: DocumentRef, attachment, file, link
 
 **Document kind**:
