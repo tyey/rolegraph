@@ -25,7 +25,9 @@ export function PersonView({ id }: { id: string }) {
           Name this placeholder…
         </button>
       )}
-      <div className="text-xs text-slate-600">Profile links: {person.links.join(', ') || 'none'}</div>
+      <div className="text-xs text-slate-600">
+        Profile links: <ProfileLinks links={person.links} />
+      </div>
       {sameLink.length > 0 && (
         <div className="rounded bg-amber-50 p-2 text-xs">
           Shares a Profile link with <b>{sameLink.map((x) => personName(db, x.id)).join(', ')}</b>. Same human?{' '}
@@ -40,6 +42,7 @@ export function PersonView({ id }: { id: string }) {
             <th>Process</th>
             <th>spoke for</th>
             <th>Parts</th>
+            <th>Decision maker</th>
             <th>state</th>
           </tr>
         </thead>
@@ -54,8 +57,8 @@ export function PersonView({ id }: { id: string }) {
               <td>{pt.side === 'Agency' ? `Agency (${agencyName(db, p)})` : pt.side === 'none' ? 'no one' : `${pt.side} (${companyName(db, p)})`}</td>
               <td>
                 {pt.parts.join(', ')}
-                {pt.decisionMaker && ' ⚖︎'}
               </td>
+              <td>{pt.decisionMaker ? <span className="font-semibold text-amber-700">⚖︎ yes</span> : <span className="text-slate-400">no</span>}</td>
               <td>{p.outcome ?? p.status}</td>
             </tr>
           ))}
@@ -364,9 +367,10 @@ export function PeopleList() {
         <thead className="text-left text-slate-500">
           <tr>
             <th className="w-6" />
-            <th>Company / Agency</th>
             <th>Person</th>
+            <th>Company / Agency</th>
             <th>Parts</th>
+            <th>Decision maker</th>
             <th>Processes</th>
             <th>Profile links</th>
             <th />
@@ -387,21 +391,23 @@ export function PeopleList() {
                   />
                 </td>
                 <td className="py-1">
-                  {r.org || <span className="text-slate-400">— no one</span>}
-                  {r.side !== 'Company' && r.org && <span className="ml-1 text-[10px] text-slate-400">{r.side}</span>}
-                </td>
-                <td>
                   <button className="underline" onClick={() => nav({ person: x.id, tab: undefined })}>
                     {personName(db, x.id)}
                   </button>
                   {!x.name && <span className="ml-1 rounded bg-slate-200 px-1 text-[10px]">placeholder</span>}
                 </td>
                 <td>
-                  {[...r.parts].join(', ') || '—'}
-                  {r.dm && <span className="ml-1 text-amber-700">⚖︎ Decision maker</span>}
+                  {r.org || <span className="text-slate-400">— no one</span>}
+                  {r.side !== 'Company' && r.org && <span className="ml-1 text-[10px] text-slate-400">{r.side}</span>}
                 </td>
+                <td>
+                  {[...r.parts].join(', ') || '—'}
+                </td>
+                <td>{r.dm ? <span className="font-semibold text-amber-700">⚖︎ yes</span> : <span className="text-slate-400">no</span>}</td>
                 <td>{r.processes}</td>
-                <td className="text-slate-500">{x.links.join(', ') || '—'}</td>
+                <td>
+                  <ProfileLinks links={x.links} />
+                </td>
                 <td className="text-amber-700">{dups.length > 0 && `possible duplicate of ${dups.map((d) => personName(db, d.id)).join(', ')}`}</td>
               </tr>
             )
@@ -410,5 +416,22 @@ export function PeopleList() {
       </table>
       {picked.length === 2 && <MergePersons a={picked[0]} initialB={picked[1]} onDone={() => setPicked([])} />}
     </div>
+  )
+}
+
+/** Profile links always open outside rolegraph, in a new tab. */
+export function ProfileLinks({ links }: { links: string[] }) {
+  if (!links.length) return <span className="text-slate-400">none</span>
+  return (
+    <>
+      {links.map((l, i) => (
+        <span key={l}>
+          {i > 0 && ', '}
+          <a className="text-indigo-700 underline" href={l.includes('@') ? `mailto:${l}` : `https://${l}`} target="_blank" rel="noopener noreferrer">
+            {l} ↗
+          </a>
+        </span>
+      ))}
+    </>
   )
 }
