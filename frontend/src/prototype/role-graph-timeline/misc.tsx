@@ -191,7 +191,22 @@ const snippet = (text: string, q: string) => {
 
 export function SearchBox({ className = '' }: { className?: string }) {
   const { search, nav } = useStore()
-  return <input className={`rounded border px-2 py-1 text-sm ${className}`} placeholder="Search notes, Feedback, people, Companies… (try “sql”, “OrchardPay”, “ada”)" value={search.q ?? ''} onChange={(e) => nav({ q: e.target.value }, true)} />
+  return (
+    <label className={`relative block ${className}`}>
+      <svg className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.5-3.5" />
+      </svg>
+      <input
+        type="search"
+        className="w-full rounded-md border border-slate-300 bg-white py-1.5 pl-8 pr-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+        placeholder="Search"
+        aria-label="Search notes, Feedback, People, Companies and Roles"
+        value={search.q ?? ''}
+        onChange={(e) => nav({ q: e.target.value }, true)}
+      />
+    </label>
+  )
 }
 
 export function SearchResults({ onPick }: { onPick?: () => void }) {

@@ -99,14 +99,14 @@ export function VariantC() {
     const ps = db.processes.filter((p) => p.roleId === id)
     return (
       <div style={{ paddingLeft: depth * 12 }}>
-        <button className={`block w-full truncate rounded px-1 text-left text-sm font-semibold ${search.role === id ? 'bg-indigo-100' : ''}`} onClick={() => nav({ role: id, tab: 'role' })}>
+        <button className={`block w-full truncate rounded px-2 py-0.5 text-left text-sm font-semibold ${search.role === id ? 'bg-indigo-100' : ''}`} onClick={() => nav({ role: id, tab: 'role' })}>
           {roleName(db, id)}
           {others.length > 0 && <span className="ml-1 text-xs font-normal text-slate-400">↗ also under {others.map((o) => roleName(db, o)).join(', ')}</span>}
         </button>
         {ps.map((p) => (
           <button
             key={p.id}
-            className={`ml-3 block w-[calc(100%-12px)] truncate rounded px-1 text-left text-xs ${search.process === p.id ? 'bg-indigo-600 text-white' : isOpen(p) ? '' : 'text-slate-400'}`}
+            className={`ml-3 block w-[calc(100%-12px)] truncate rounded px-2 py-0.5 text-left text-xs ${search.process === p.id ? 'bg-indigo-600 text-white' : isOpen(p) ? '' : 'text-slate-400'}`}
             onClick={() => nav({ process: p.id, person: undefined, tab: undefined, step: undefined })}
           >
             {isOpen(p) ? '●' : '○'} {companyName(db, p)} <span className="opacity-60">{p.outcome ?? p.status}</span>
@@ -120,13 +120,22 @@ export function VariantC() {
   }
   const tab = search.q ? 'search' : (search.tab ?? (search.person ? 'people' : 'process'))
   return (
-    <div className="flex h-screen">
-      <nav className="w-96 shrink-0 space-y-1 overflow-y-auto border-r bg-slate-50 p-2">
-        <div className="px-1 pb-2 font-bold">rolegraph</div>
-        <SearchBox className="mb-2 w-full" />
-        {roots.map((r) => (
-          <Outline key={r.id} id={r.id} depth={0} />
-        ))}
+    <div className="flex h-screen flex-col">
+      <header className="flex h-12 shrink-0 items-center gap-2 border-b bg-white px-4">
+        <button className="flex items-center gap-2" onClick={() => nav({ role: undefined, process: undefined, person: undefined, q: undefined, tab: undefined, step: undefined })}>
+          <Logo />
+          <span className="text-lg font-semibold tracking-tight text-slate-900">rolegraph</span>
+        </button>
+      </header>
+      <div className="flex min-h-0 flex-1">
+      <nav className="w-96 shrink-0 overflow-y-auto border-r bg-slate-50 p-3">
+        <SearchBox className="mb-4" />
+        <div className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Roles</div>
+        <div className="space-y-0.5">
+          {roots.map((r) => (
+            <Outline key={r.id} id={r.id} depth={0} />
+          ))}
+        </div>
       </nav>
       <main className="flex flex-1 flex-col overflow-hidden">
         <div className="flex gap-4 border-b px-4 pt-2 text-sm">
@@ -158,6 +167,19 @@ export function VariantC() {
           {tab === 'lists' && <ListsPanel />}
         </div>
       </main>
+      </div>
     </div>
+  )
+}
+
+/** Placeholder mark: a tiny DAG (two parents, one child). */
+function Logo() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6 6 12 18M18 6 12 18" stroke="#6366f1" strokeWidth="2" fill="none" />
+      <circle cx="6" cy="6" r="3.2" fill="#4f46e5" />
+      <circle cx="18" cy="6" r="3.2" fill="#4f46e5" />
+      <circle cx="12" cy="18" r="3.2" fill="#a5b4fc" stroke="#4f46e5" strokeWidth="1.5" />
+    </svg>
   )
 }
