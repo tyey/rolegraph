@@ -1,5 +1,5 @@
 // PROTOTYPE (tyey/rolegraph#13): three structurally different layouts for the same data.
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { RoleGraph } from './graph'
 import { ListsPanel, PeopleList, PersonView, ProcessList, SearchBox, SearchResults } from './misc'
 import { ProcessPanel } from './process'
@@ -126,6 +126,32 @@ export function VariantC() {
           <Logo />
           <span className="text-lg font-semibold tracking-tight text-slate-900">rolegraph</span>
         </button>
+        <div className="ml-auto flex items-center gap-1 text-sm">
+          <HeaderPanel label="Help">
+            <dl className="space-y-1.5">
+              {GLOSSARY.map(([t, d]) => (
+                <div key={t}>
+                  <dt className="inline font-semibold">{t}</dt> <dd className="inline text-slate-600">{d}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="mt-3 border-t pt-2 text-slate-500">Full glossary: CONTEXT.md · Runbook: README.md</div>
+          </HeaderPanel>
+          <HeaderPanel label="About">
+            <div className="font-semibold">rolegraph 0.1.0 (prototype)</div>
+            <div className="mt-1 text-slate-600">A personal tracker of interview Processes, organised as a graph of Roles.</div>
+            <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-slate-600">
+              <dt className="text-slate-500">Data</dt>
+              <dd>local SQLite, this machine only</dd>
+              <dt className="text-slate-500">Last export</dt>
+              <dd>Nov 17, to the synced folder</dd>
+              <dt className="text-slate-500">API</dt>
+              <dd>localhost:8000/docs</dd>
+              <dt className="text-slate-500">Source</dt>
+              <dd>github.com/tyey/rolegraph</dd>
+            </dl>
+          </HeaderPanel>
+        </div>
       </header>
       <div className="flex min-h-0 flex-1">
       <nav className="w-96 shrink-0 overflow-y-auto border-r bg-slate-50 p-3">
@@ -181,5 +207,35 @@ function Logo() {
       <circle cx="18" cy="6" r="3.2" fill="#4f46e5" />
       <circle cx="12" cy="18" r="3.2" fill="#a5b4fc" stroke="#4f46e5" strokeWidth="1.5" />
     </svg>
+  )
+}
+
+const GLOSSARY: [string, string][] = [
+  ['Role', 'a kind of job you pursue; Roles form a graph (a child is a specialisation).'],
+  ['Process', 'one attempt with one Company for one Role: Open or Closed.'],
+  ['Step', 'one interaction on a Process Timeline: Planned, Done or Cancelled.'],
+  ['Origin', 'the first Step, with the Channel it came through.'],
+  ['Participant', 'a Person in one Process, with their Parts.'],
+  ['Decision maker', 'a Participant with a say in hiring you.'],
+  ['Merge', 'fold a duplicate into another of the same kind.'],
+]
+
+/** Header button that drops a small panel below it; closes on outside click. */
+function HeaderPanel({ label, children }: { label: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const on = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false)
+    document.addEventListener('mousedown', on)
+    return () => document.removeEventListener('mousedown', on)
+  }, [open])
+  return (
+    <div ref={ref} className="relative">
+      <button className={`rounded px-3 py-1 ${open ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-100'}`} aria-expanded={open} onClick={() => setOpen(!open)}>
+        {label}
+      </button>
+      {open && <div className="absolute right-0 top-full z-40 mt-1 w-96 rounded-lg border bg-white p-4 text-xs shadow-xl">{children}</div>}
+    </div>
   )
 }
