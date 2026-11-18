@@ -1,7 +1,7 @@
 // PROTOTYPE (tyey/rolegraph#13): Person view + Merge, search, editable lists.
 import { useState } from 'react'
 import type { Db } from './data'
-import { agencyName, companyName, fmtDay, isOpen, likelyDuplicates, personName, processTitle, roleName, useStore } from './store'
+import { agencyName, companyName, DecisionMaker, StatePill, fmtDay, isOpen, likelyDuplicates, personName, processTitle, roleName, useStore } from './store'
 
 export function PersonView({ id }: { id: string }) {
   const { db, write, nav } = useStore()
@@ -64,8 +64,10 @@ export function PersonView({ id }: { id: string }) {
               <td>
                 {pt.parts.join(', ')}
               </td>
-              <td>{pt.decisionMaker ? <span className="font-semibold text-amber-700">⚖︎ yes</span> : <span className="text-slate-400">no</span>}</td>
-              <td>{p.outcome ?? p.status}</td>
+              <td>{pt.decisionMaker ? <DecisionMaker /> : <span className="text-slate-400">no</span>}</td>
+              <td>
+                <StatePill p={p} />
+              </td>
             </tr>
           ))}
         </tbody>
@@ -264,7 +266,9 @@ export function ProcessList({ roleIds, includeClosed = true }: { roleIds: string
                 {p.agencyId && <span className="text-xs text-slate-400"> via {agencyName(db, p)}</span>}
               </td>
               <td className="text-xs">{roleName(db, p.roleId)}</td>
-              <td className="text-xs">{p.outcome ?? p.status}</td>
+              <td>
+                <StatePill p={p} />
+              </td>
               <td className="text-xs">{next ? `${next.kind} · ${fmtDay(next.day)}` : '—'}</td>
             </tr>
           )
@@ -422,7 +426,7 @@ export function PeopleList() {
                 <td>
                   {[...r.parts].join(', ') || '—'}
                 </td>
-                <td>{r.dm ? <span className="font-semibold text-amber-700">⚖︎ yes</span> : <span className="text-slate-400">no</span>}</td>
+                <td>{r.dm ? <DecisionMaker /> : <span className="text-slate-400">no</span>}</td>
                 <td>{r.processes}</td>
                 <td>
                   <ProfileLinks links={x.links} />

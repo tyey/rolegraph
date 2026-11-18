@@ -96,6 +96,22 @@ export const likelyDuplicates = (db: Db, id: string) => {
   const dismissed = (o: string) => db.notDuplicates.some(([a, b]) => (a === id && b === o) || (a === o && b === id))
   return db.persons.filter((x) => x.id !== id && x.links.some((l) => me.links.includes(l)) && !dismissed(x.id))
 }
+// ---- palette: one colour family per Process state (see #13 resolution) ----
+export const STATE_STYLE: Record<string, { pill: string; dot: string; chip: string }> = {
+  Active: { pill: 'bg-emerald-100 text-emerald-800', dot: 'bg-emerald-500', chip: 'border-emerald-400 bg-emerald-50 text-emerald-900' },
+  'On hold': { pill: 'bg-slate-100 text-slate-600', dot: 'bg-slate-400', chip: 'border-slate-300 bg-slate-50 text-slate-600' },
+  'Offer received': { pill: 'bg-fuchsia-100 text-fuchsia-800', dot: 'bg-fuchsia-500', chip: 'border-fuchsia-400 bg-fuchsia-50 text-fuchsia-900' },
+  Accepted: { pill: 'bg-emerald-700 text-white', dot: 'bg-emerald-700', chip: 'border-emerald-700 bg-emerald-700 text-white' },
+  Rejected: { pill: 'bg-rose-100 text-rose-800', dot: 'bg-rose-500', chip: 'border-rose-300 bg-rose-50 text-rose-800' },
+  Declined: { pill: 'bg-slate-100 text-slate-400', dot: 'bg-slate-300', chip: 'border-slate-200 bg-slate-50 text-slate-400' },
+  Withdrawn: { pill: 'bg-slate-100 text-slate-400', dot: 'bg-slate-300', chip: 'border-slate-200 bg-slate-50 text-slate-400' },
+  Ghosted: { pill: 'bg-slate-100 text-slate-400', dot: 'bg-slate-300', chip: 'border-dashed border-slate-300 bg-slate-50 text-slate-400' },
+}
+export const processState = (p: Process) => (p.outcome ?? p.status)!
+export const StatePill = ({ p }: { p: Process }) => (
+  <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${STATE_STYLE[processState(p)].pill}`}>{processState(p)}</span>
+)
+export const DecisionMaker = () => <span className="whitespace-nowrap rounded-full border border-indigo-300 bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-800">⚖︎ Decision maker</span>
 export const isOpen = (p: Process) => !p.outcome
 
 /** Origin first, then dated Steps by day+time, then undated Planned Steps in the user's order. */

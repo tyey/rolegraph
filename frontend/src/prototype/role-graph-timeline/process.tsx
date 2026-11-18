@@ -1,7 +1,7 @@
 // PROTOTYPE (tyey/rolegraph#13): a Process with its Participants and Timeline.
 import { useEffect, useRef, useState } from 'react'
 import type { Db, Outcome, Process, Side, Status, Step, StepState } from './data'
-import { agencyName, companyName, fields, fmtDay, isOpen, personName, roleName, timeline, uid, useStore } from './store'
+import { agencyName, companyName, DecisionMaker, fields, processState, STATE_STYLE, StatePill, fmtDay, isOpen, personName, roleName, timeline, uid, useStore } from './store'
 
 const STATUSES: Status[] = ['Active', 'On hold', 'Offer received']
 const OUTCOMES: Outcome[] = ['Accepted', 'Declined', 'Rejected', 'Withdrawn', 'Ghosted']
@@ -123,8 +123,8 @@ export function ProcessPanel({ id, wide = false }: { id: string; wide?: boolean 
         <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
           {isOpen(p) ? (
             <>
-              <span className="rounded bg-emerald-100 px-2 py-0.5 text-emerald-800">Open</span>
-              <select className="rounded border px-1" value={p.status} onChange={(e) => w('change Status', (d) => (P(d, p.id).status = e.target.value as Status))}>
+              <span className="text-xs text-slate-500">Open</span>
+              <select className={`rounded-full border-0 px-2 py-0.5 text-xs font-medium ${STATE_STYLE[processState(p)].pill}`} value={p.status} onChange={(e) => w('change Status', (d) => (P(d, p.id).status = e.target.value as Status))}>
                 {STATUSES.map((s) => (
                   <option key={s}>{s}</option>
                 ))}
@@ -135,7 +135,8 @@ export function ProcessPanel({ id, wide = false }: { id: string; wide?: boolean 
             </>
           ) : (
             <>
-              <span className="rounded bg-slate-200 px-2 py-0.5">Closed · {p.outcome}</span>
+              <span className="text-xs text-slate-500">Closed</span>
+              <StatePill p={p} />
               <button
                 className="rounded border px-2"
                 onClick={() =>
@@ -748,7 +749,7 @@ function Participants({ p }: { p: Process }) {
               <td>
                 <label title="Has a say in whether you are hired" className="flex items-center gap-1">
                   <input type="checkbox" checked={pt.decisionMaker} onChange={(e) => w('mark Decision maker', (d) => (P(d, p.id).participants[i].decisionMaker = e.target.checked))} />
-                  {pt.decisionMaker && <span className="text-amber-700">⚖︎ yes</span>}
+                  {pt.decisionMaker && <DecisionMaker />}
                 </label>
               </td>
             </tr>

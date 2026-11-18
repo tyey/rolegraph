@@ -4,7 +4,7 @@ import { RoleGraph } from './graph'
 import { ListsPanel, PeopleList, PersonView, ProcessList, SearchBox, SearchResults } from './misc'
 import { ProcessPanel } from './process'
 import { RolePage } from './role'
-import { companyName, descendants, isOpen, roleName, useStore } from './store'
+import { companyName, descendants, isOpen, processState, roleName, STATE_STYLE, useStore } from './store'
 
 function TopBar({ children }: { children?: ReactNode }) {
   const { nav } = useStore()
@@ -106,10 +106,12 @@ export function VariantC() {
         {ps.map((p) => (
           <button
             key={p.id}
-            className={`ml-3 block w-[calc(100%-12px)] truncate rounded px-2 py-0.5 text-left text-xs ${search.process === p.id ? 'bg-indigo-600 text-white' : isOpen(p) ? '' : 'text-slate-400'}`}
+            className={`ml-3 flex w-[calc(100%-12px)] items-center gap-1.5 truncate rounded px-2 py-0.5 text-left text-xs ${search.process === p.id ? 'bg-indigo-100 font-medium text-indigo-900' : isOpen(p) ? 'text-slate-800 hover:bg-slate-100' : 'text-slate-400 hover:bg-slate-100'}`}
             onClick={() => nav({ process: p.id, person: undefined, tab: undefined, step: undefined })}
           >
-            {isOpen(p) ? '●' : '○'} {companyName(db, p)} <span className="opacity-60">{p.outcome ?? p.status}</span>
+            <span className={`h-2 w-2 shrink-0 rounded-full ${STATE_STYLE[processState(p)].dot}`} />
+            <span className="truncate">{companyName(db, p)}</span>
+            <span className={`ml-auto shrink-0 rounded-full px-1.5 text-[10px] ${STATE_STYLE[processState(p)].pill}`}>{processState(p)}</span>
           </button>
         ))}
         {kids.map((k) => (

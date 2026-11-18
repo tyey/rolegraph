@@ -4,7 +4,7 @@ import { BaseEdge, Background, Controls, EdgeLabelRenderer, getBezierPath, Handl
 import '@xyflow/react/dist/style.css'
 import type { Db } from './data'
 import { useEffect, useRef, useState } from 'react'
-import { companyName, isOpen, roleName, uid, useStore, wouldCycle } from './store'
+import { companyName, isOpen, roleName, STATE_STYLE, uid, useStore, wouldCycle } from './store'
 
 type RoleData = { label: string; count: number; open: number; selected: boolean }
 type ProcData = { label: string; state: string; open: boolean; selected: boolean }
@@ -23,7 +23,7 @@ function RoleNode({ data }: NodeProps<Node<RoleData>>) {
 }
 function ProcNode({ data }: NodeProps<Node<ProcData>>) {
   return (
-    <div className={`w-full truncate whitespace-nowrap rounded-full border px-3 py-1 text-center text-xs ${data.selected ? 'ring-2 ring-indigo-500' : ''} ${data.open ? 'border-emerald-400 bg-emerald-50' : 'border-slate-300 bg-slate-100 text-slate-500'}`}>
+    <div className={`w-full truncate whitespace-nowrap rounded-full border px-3 py-1 text-center text-xs ${data.selected ? 'ring-2 ring-indigo-500' : ''} ${STATE_STYLE[data.state].chip}`}>
       <Handle type="target" position={Position.Top} isConnectable={false} />
       {data.label} <span className="opacity-70">· {data.state}</span>
     </div>
