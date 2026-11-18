@@ -635,7 +635,19 @@ function Participants({ p }: { p: Process }) {
                 </select>
               </td>
               <td>
-                {pt.parts.join(', ')}
+                {pt.parts.map((part) => (
+                  <span key={part} className="mr-1 inline-flex items-center gap-0.5 rounded bg-slate-100 px-1.5">
+                    {part}
+                    <button
+                      className="text-slate-400 hover:text-red-600 disabled:opacity-30"
+                      disabled={pt.parts.length === 1}
+                      title={pt.parts.length === 1 ? 'A Participant needs at least one Part' : `remove ${part}`}
+                      onClick={() => w('remove Part', (d) => (P(d, p.id).participants[i].parts = pt.parts.filter((x) => x !== part)))}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
                 <select
                   className="ml-1 w-5 rounded border"
                   value=""
