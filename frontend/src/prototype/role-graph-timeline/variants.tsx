@@ -5,12 +5,13 @@ import { ListsPanel, PeopleList, PersonView, ProcessList, SearchBox, SearchResul
 import { ProcessPanel } from './process'
 import { RolePage } from './role'
 import { companyName, descendants, isOpen, processState, roleName, STATE_STYLE, useStore } from './store'
+import { T } from './ui'
 
 function TopBar({ children }: { children?: ReactNode }) {
   const { nav } = useStore()
   return (
     <div className="flex items-center gap-3 border-b bg-white px-3 py-2">
-      <button className="font-bold" onClick={() => nav({ role: undefined, process: undefined, person: undefined, q: undefined, tab: undefined, step: undefined })}>
+      <button className="font-semibold" onClick={() => nav({ role: undefined, process: undefined, person: undefined, q: undefined, tab: undefined, step: undefined })}>
         rolegraph
       </button>
       <SearchBox className="w-[420px]" />
@@ -111,7 +112,7 @@ export function VariantC() {
           >
             <span className={`h-2 w-2 shrink-0 rounded-full ${STATE_STYLE[processState(p)].dot}`} />
             <span className="truncate">{companyName(db, p)}</span>
-            <span className={`ml-auto shrink-0 rounded-full px-1.5 text-[10px] ${STATE_STYLE[processState(p)].pill}`}>{processState(p)}</span>
+            <span className={`ml-auto shrink-0 rounded-full px-1.5 text-xs ${STATE_STYLE[processState(p)].pill}`}>{processState(p)}</span>
           </button>
         ))}
         {kids.map((k) => (
@@ -122,7 +123,7 @@ export function VariantC() {
   }
   const tab = search.q ? 'search' : (search.tab ?? (search.person ? 'people' : 'process'))
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-screen flex-col text-sm text-slate-900">
       <header className="flex h-12 shrink-0 items-center gap-2 border-b bg-white px-4">
         <button className="flex items-center gap-2" onClick={() => nav({ role: undefined, process: undefined, person: undefined, q: undefined, tab: undefined, step: undefined })}>
           <Logo />
@@ -160,7 +161,7 @@ export function VariantC() {
       <div className="flex min-h-0 flex-1">
       <nav className="w-96 shrink-0 overflow-y-auto border-r bg-slate-50 p-3">
         <SearchBox className="mb-4" />
-        <div className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Roles</div>
+        <div className={`mb-1 px-2 ${T.eyebrow}`}>Roles</div>
         <div className="space-y-0.5">
           {roots.map((r) => (
             <Outline key={r.id} id={r.id} depth={0} />

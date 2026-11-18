@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import type { Db } from './data'
 import { agencyName, companyName, DecisionMaker, StatePill, fmtDay, isOpen, likelyDuplicates, personName, processTitle, roleName, useStore } from './store'
+import { T } from './ui'
 
 export function PersonView({ id }: { id: string }) {
   const { db, write, nav } = useStore()
@@ -12,8 +13,8 @@ export function PersonView({ id }: { id: string }) {
   const sameLink = likelyDuplicates(db, id)
   return (
     <div className="space-y-3 p-4 text-sm">
-      <div className="text-xs uppercase tracking-wide text-slate-500">Person</div>
-      <h2 className="text-xl font-bold">{person.name ?? <span className="italic">“{person.description}”</span>}</h2>
+      <div className={T.eyebrow}>Person</div>
+      <h2 className={T.page}>{person.name ?? <span className="italic">“{person.description}”</span>}</h2>
       {!person.name && (
         <button
           className="rounded border px-2 text-xs"
@@ -42,14 +43,14 @@ export function PersonView({ id }: { id: string }) {
           </button>
         </div>
       )}
-      <table className="w-full text-xs">
-        <thead className="text-left text-slate-500">
+      <table className={T.table}>
+        <thead className={T.thead}>
           <tr>
             <th>Process</th>
-            <th>spoke for</th>
+            <th>Spoke for</th>
             <th>Parts</th>
             <th>Decision maker</th>
-            <th>state</th>
+            <th>State</th>
           </tr>
         </thead>
         <tbody>
@@ -247,8 +248,8 @@ export function ProcessList({ roleIds, includeClosed = true }: { roleIds: string
   const { db, search, nav } = useStore()
   const ps = db.processes.filter((p) => roleIds.includes(p.roleId) && (includeClosed || isOpen(p)))
   return (
-    <table className="w-full text-sm">
-      <thead className="text-left text-xs text-slate-500">
+    <table className={T.table}>
+      <thead className={T.thead}>
         <tr>
           <th className="py-1">Company</th>
           <th>Role</th>
@@ -265,11 +266,11 @@ export function ProcessList({ roleIds, includeClosed = true }: { roleIds: string
                 {companyName(db, p)}
                 {p.agencyId && <span className="text-xs text-slate-400"> via {agencyName(db, p)}</span>}
               </td>
-              <td className="text-xs">{roleName(db, p.roleId)}</td>
+              <td>{roleName(db, p.roleId)}</td>
               <td>
                 <StatePill p={p} />
               </td>
-              <td className="text-xs">{next ? `${next.kind} · ${fmtDay(next.day)}` : '—'}</td>
+              <td>{next ? `${next.kind} · ${fmtDay(next.day)}` : '—'}</td>
             </tr>
           )
         })}
@@ -377,7 +378,7 @@ export function PeopleList() {
   return (
     <div className="space-y-3 p-4 text-sm">
       <div className="flex items-center gap-3">
-        <h2 className="text-lg font-bold">People</h2>
+        <h2 className={T.page}>People</h2>
         <select className="rounded border text-xs" value={org} onChange={(e) => setOrg(e.target.value)}>
           <option value="">All Companies & Agencies</option>
           {orgs.map((o) => (
@@ -386,8 +387,8 @@ export function PeopleList() {
         </select>
         <span className="text-xs text-slate-500">Tick two to Merge them.</span>
       </div>
-      <table className="w-full text-xs">
-        <thead className="text-left text-slate-500">
+      <table className={T.table}>
+        <thead className={T.thead}>
           <tr>
             <th className="w-6" />
             <th>Person</th>
@@ -417,11 +418,11 @@ export function PeopleList() {
                   <button className="underline" onClick={() => nav({ person: x.id, tab: undefined })}>
                     {personName(db, x.id)}
                   </button>
-                  {!x.name && <span className="ml-1 rounded bg-slate-200 px-1 text-[10px]">placeholder</span>}
+                  {!x.name && <span className="ml-1 rounded bg-slate-200 px-1 text-xs">placeholder</span>}
                 </td>
                 <td>
                   {r.org || <span className="text-slate-400">— no one</span>}
-                  {r.side !== 'Company' && r.org && <span className="ml-1 text-[10px] text-slate-400">{r.side}</span>}
+                  {r.side !== 'Company' && r.org && <span className="ml-1 text-xs text-slate-400">{r.side}</span>}
                 </td>
                 <td>
                   {[...r.parts].join(', ') || '—'}
@@ -436,7 +437,7 @@ export function PeopleList() {
                     <>
                       possible duplicate of {dups.map((d) => personName(db, d.id)).join(', ')}
                       <button
-                        className="ml-1 rounded border border-amber-600 px-1 text-[10px]"
+                        className="ml-1 rounded border border-amber-600 px-1 text-xs"
                         onClick={() => write('mark not duplicates', (d) => dups.forEach((o) => d.notDuplicates.push([x.id, o.id])))}
                       >
                         not the same

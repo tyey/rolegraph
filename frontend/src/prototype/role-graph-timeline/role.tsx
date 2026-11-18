@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { Db } from './data'
 import { ProcessList } from './misc'
 import { descendants, roleName, uid, useStore, wouldCycle } from './store'
+import { T } from './ui'
 
 const hasCycle = (d: Db) => d.roles.some((r) => d.edges.some((e) => e.parent !== r.id && e.child === r.id && descendants(d, r.id).includes(e.parent)))
 
@@ -33,8 +34,8 @@ export function RolePage({ id }: { id: string }) {
   const others = db.roles.filter((r) => r.id !== id)
   return (
     <div className="space-y-4 p-4 text-sm">
-      <div className="text-xs uppercase tracking-wide text-slate-500">Role</div>
-      <h2 className="text-xl font-bold">{role.name}</h2>
+      <div className={T.eyebrow}>Role</div>
+      <h2 className={T.page}>{role.name}</h2>
       <div className="flex flex-wrap gap-2 text-xs">
         <button
           className="rounded border px-2"
@@ -128,7 +129,7 @@ export function RolePage({ id }: { id: string }) {
       </div>
       <div>
         <div className="mb-1 flex items-baseline gap-3">
-          <h3 className="font-semibold">Processes</h3>
+          <h3 className={T.section}>Processes</h3>
           <label className="text-xs">
             <input type="checkbox" checked={withKids} onChange={(e) => setWithKids(e.target.checked)} /> include child Roles
           </label>

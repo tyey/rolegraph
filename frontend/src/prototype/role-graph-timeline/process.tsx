@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Db, Outcome, Process, Side, Status, Step, StepState } from './data'
 import { agencyName, companyName, DecisionMaker, fields, processState, STATE_STYLE, StatePill, fmtDay, isOpen, personName, roleName, timeline, uid, useStore } from './store'
+import { T } from './ui'
 
 const STATUSES: Status[] = ['Active', 'On hold', 'Offer received']
 const OUTCOMES: Outcome[] = ['Accepted', 'Declined', 'Rejected', 'Withdrawn', 'Ghosted']
@@ -38,7 +39,7 @@ export function ConflictBanner() {
           Your change “{conflict.what}” was not saved. Fields only one side changed are kept automatically; for fields both changed, pick which to keep.
         </div>
         <table className="mt-3 w-full table-fixed text-xs">
-          <thead className="text-left text-slate-500">
+          <thead className={T.thead}>
             <tr>
               <th className="w-44">Field</th>
               <th>Before</th>
@@ -66,7 +67,7 @@ export function ConflictBanner() {
                 <tr key={r.k} className={`border-t ${r.clash ? 'bg-amber-50' : ''}`}>
                   <td className="p-1 align-top">
                     {r.label}
-                    {r.clash && <div className="text-[10px] font-semibold text-amber-700">both changed</div>}
+                    {r.clash && <div className="text-xs font-semibold text-amber-700">both changed</div>}
                   </td>
                   <td className="whitespace-pre-wrap break-words p-1 align-top text-slate-500">{show(r.base)}</td>
                   {cell('theirs')}
@@ -112,13 +113,13 @@ export function ProcessPanel({ id, wide = false }: { id: string; wide?: boolean 
   return (
     <div className="space-y-4 p-4">
       <header>
-        <div className="text-xs uppercase tracking-wide text-slate-500">
+        <div className={T.eyebrow}>
           <button className="underline" onClick={() => nav({ role: p.roleId })}>
             {roleName(db, p.roleId)}
           </button>
           {agency && <> · via Agency {agency}</>} · v{p.version}
         </div>
-        <h2 className="text-xl font-bold">{companyName(db, p)}</h2>
+        <h2 className={T.page}>{companyName(db, p)}</h2>
         {!p.companyId && <div className="text-xs text-amber-700">The Agency hasn’t named the Company yet.</div>}
         <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
           {isOpen(p) ? (
@@ -171,7 +172,7 @@ export function ProcessPanel({ id, wide = false }: { id: string; wide?: boolean 
           <Notes big label="Process prep notes" value={p.prep} onSave={(v) => w('edit Process prep notes', (d) => (P(d, p.id).prep = v))} />
           <Participants p={p} />
           <section>
-            <h3 className="mb-2 font-semibold">Timeline</h3>
+            <h3 className={`mb-2 ${T.section}`}>Timeline</h3>
             <Timeline p={p} openStep={search.step} />
             <AddStep p={p} />
           </section>
@@ -179,7 +180,7 @@ export function ProcessPanel({ id, wide = false }: { id: string; wide?: boolean 
       ) : (
         <div className="space-y-4">
           <section>
-            <h3 className="mb-2 font-semibold">Timeline</h3>
+            <h3 className={`mb-2 ${T.section}`}>Timeline</h3>
             <Timeline p={p} openStep={search.step} />
             <AddStep p={p} />
           </section>
@@ -475,16 +476,16 @@ function StepDetail({ p, s }: { p: Process; s: Step }) {
         </div>
       )}
       <AttachDoc attached={draft.docs.map((x) => x.docId)} onAttach={(docId, fileName) => w((x) => x.docs.push({ docId, fileName }))} />
-      <label className="block text-xs font-semibold">
+      <label className={`block ${T.label}`}>
         Step prep notes
         <textarea className="mt-1 w-full rounded border p-1 text-sm font-normal" rows={3} value={draft.prep} onChange={(e) => w((x) => (x.prep = e.target.value))} />
       </label>
-      <label className="block text-xs font-semibold">
+      <label className={`block ${T.label}`}>
         Reflection (yours, one per Step)
         <textarea className="mt-1 w-full rounded border p-1 text-sm font-normal" rows={3} value={draft.reflection} onChange={(e) => w((x) => (x.reflection = e.target.value))} />
       </label>
       <div>
-        <div className="text-xs font-semibold">Feedback</div>
+        <div className={T.label}>Feedback</div>
         {draft.feedback.map((f, i) => (
           <div key={i} className="mt-1 flex rounded bg-slate-50 p-1 text-xs">
             <span className="flex-1">
@@ -655,7 +656,7 @@ export function Notes({ label, value, onSave, big = false }: { label: string; va
   const [draft, setDraft] = useState<string>()
   return (
     <div className="text-sm">
-      <div className="text-xs font-semibold">{label}</div>
+      <div className={big ? `mb-1 ${T.section}` : T.label}>{label}</div>
       {draft === undefined ? (
         <button className={`mt-1 w-full whitespace-pre-wrap rounded bg-yellow-50 p-2 text-left ${big ? 'min-h-24 text-sm' : 'text-xs'}`} onClick={() => setDraft(value)}>
           {value || <span className="text-slate-400">click to write…</span>}
@@ -691,12 +692,12 @@ function Participants({ p }: { p: Process }) {
   const free = db.persons.filter((x) => !p.participants.some((pt) => pt.personId === x.id))
   return (
     <div className="text-sm">
-      <div className="text-xs font-semibold">Participants</div>
-      <table className="mt-1 w-full text-xs">
-        <thead className="text-left text-[10px] uppercase text-slate-400">
+      <div className={`mb-1 ${T.section}`}>Participants</div>
+      <table className={`mt-1 ${T.table}`}>
+        <thead className={T.thead}>
           <tr>
             <th>Person</th>
-            <th>speaks for</th>
+            <th>Speaks for</th>
             <th>Parts</th>
             <th>Decision maker</th>
           </tr>
