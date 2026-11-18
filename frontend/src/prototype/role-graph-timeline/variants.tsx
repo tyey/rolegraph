@@ -118,7 +118,7 @@ export function VariantC() {
       </div>
     )
   }
-  const tab = search.q ? 'search' : (search.tab ?? (search.person ? 'person' : 'process'))
+  const tab = search.q ? 'search' : (search.tab ?? (search.person ? 'people' : 'process'))
   return (
     <div className="flex h-screen">
       <nav className="w-72 space-y-1 overflow-y-auto border-r bg-slate-50 p-2">
@@ -130,17 +130,25 @@ export function VariantC() {
       </nav>
       <main className="flex flex-1 flex-col overflow-hidden">
         <div className="flex gap-4 border-b px-4 pt-2 text-sm">
-          {(['role', 'process', 'person', 'people', 'graph', 'search', 'lists'] as const).map((t) => (
-            <button key={t} className={`pb-2 ${tab === t ? 'border-b-2 border-indigo-600 font-semibold' : 'text-slate-500'}`} onClick={() => nav({ tab: t === 'process' || t === 'person' ? undefined : t, ...(t === 'process' ? { person: undefined } : {}) })}>
-              {t === 'role' ? 'Role' : t === 'process' ? 'Process' : t === 'person' ? 'Person' : t === 'people' ? 'People' : t === 'graph' ? 'Role graph' : t === 'search' ? 'Search' : 'Lists'}
+          {(['role', 'process', 'people', 'graph', 'search', 'lists'] as const).map((t) => (
+            <button key={t} className={`pb-2 ${tab === t ? 'border-b-2 border-indigo-600 font-semibold' : 'text-slate-500'}`} onClick={() => nav({ tab: t === 'process' ? undefined : t, ...(t === 'process' ? { person: undefined } : {}) })}>
+              {t === 'role' ? 'Role' : t === 'process' ? 'Process' : t === 'people' ? 'People' : t === 'graph' ? 'Role graph' : t === 'search' ? 'Search' : 'Lists'}
             </button>
           ))}
         </div>
         <div className="flex-1 overflow-y-auto">
           {tab === 'role' && (search.role ? <RolePage id={search.role} /> : <div className="p-6 text-slate-400">Pick a Role in the outline.</div>)}
           {tab === 'process' && (search.process ? <ProcessPanel id={search.process} wide /> : <div className="p-6 text-slate-400">Pick a Process in the outline.</div>)}
-          {tab === 'person' && (search.person ? <PersonView id={search.person} /> : <div className="p-6 text-slate-400">Click a Person on a Process.</div>)}
-          {tab === 'people' && <PeopleList />}
+          {tab === 'people' && (
+            <>
+              <PeopleList />
+              {search.person && (
+                <div className="border-t-4 border-slate-100">
+                  <PersonView id={search.person} />
+                </div>
+              )}
+            </>
+          )}
           {tab === 'graph' && <RoleGraph onOpenProcess={(id) => nav({ process: id, tab: undefined })} />}
           {tab === 'search' && (
             <div className="p-4">

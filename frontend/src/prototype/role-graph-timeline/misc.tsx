@@ -321,7 +321,7 @@ export function ListsPanel() {
 }
 
 export function PeopleList() {
-  const { db, nav } = useStore()
+  const { db, nav, search } = useStore()
   const [picked, setPicked] = useState<string[]>([])
   const dupOf = (id: string) => {
     const me = db.persons.find((x) => x.id === id)!
@@ -349,7 +349,7 @@ export function PeopleList() {
             const n = db.processes.filter((p) => p.participants.some((pt) => pt.personId === x.id)).length
             const dups = dupOf(x.id)
             return (
-              <tr key={x.id} className={`border-t ${dups.length ? 'bg-amber-50' : ''}`}>
+              <tr key={x.id} className={`border-t ${search.person === x.id ? 'bg-indigo-100' : dups.length ? 'bg-amber-50' : ''}`}>
                 <td>
                   <input
                     type="checkbox"
