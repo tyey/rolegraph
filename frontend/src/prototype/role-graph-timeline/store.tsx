@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { seed, type Db, type Process, type Step } from './data'
 
-export type Search = { variant?: string; role?: string; process?: string; person?: string; q?: string; tab?: string; step?: string }
+export type Search = { variant?: string; role?: string; process?: string; person?: string; q?: string; tab?: string; step?: string; hide?: string }
 
 export type Conflict = { processId: string; what: string; base: Process; retry: (db: Db) => void }
 type Ctx = {
