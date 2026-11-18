@@ -1,5 +1,5 @@
 // PROTOTYPE (tyey/rolegraph#13): a Process with its Participants and Timeline.
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Db, Outcome, Process, Side, Status, Step, StepState } from './data'
 import { agencyName, companyName, fields, fmtDay, isOpen, personName, roleName, timeline, uid, useStore } from './store'
 
@@ -13,7 +13,6 @@ const stateStyle: Record<StepState, string> = {
 }
 
 const P = (d: Db, id: string) => d.processes.find((p) => p.id === id)!
-const S = (d: Db, pid: string, sid: string) => P(d, pid).steps.find((s) => s.id === sid)!
 
 const show = (v: unknown) => (v === undefined || v === '' ? '—' : typeof v === 'string' ? v : JSON.stringify(v))
 
@@ -350,31 +349,66 @@ function Timeline({ p, openStep }: { p: Process; openStep?: string }) {
   )
 }
 
+/** Edits a draft of the Step: ✓ (or a click anywhere outside the tile) saves it in one write, ✕ throws it away. */
 function StepDetail({ p, s }: { p: Process; s: Step }) {
   const { db, write, nav } = useStore()
-  const w = (what: string, fn: (st: Step) => void) => write(what, (d) => fn(S(d, p.id, s.id)), p.id)
+  const [draft, setDraft] = useState<Step>(() => structuredClone(s))
+  const [deleting, setDeleting] = useState(false)
   const [fb, setFb] = useState('')
   const [fbBy, setFbBy] = useState('')
+  const ref = useRef<HTMLDivElement>(null)
+  const w = (fn: (st: Step) => void) =>
+    setDraft((cur) => {
+      const x = structuredClone(cur)
+      fn(x)
+      return x
+    })
+  const dirty = JSON.stringify(draft) !== JSON.stringify(s)
+  const approve = () => {
+    if (dirty) write(`edit ${s.kind} Step`, (d) => (P(d, p.id).steps = P(d, p.id).steps.map((x) => (x.id === s.id ? draft : x))), p.id)
+    nav({ step: undefined }, true)
+  }
+  const reject = () => nav({ step: undefined }, true)
+  const approveRef = useRef(approve)
+  approveRef.current = approve
+  useEffect(() => {
+    const on = (e: MouseEvent) => {
+      const tile = ref.current?.closest('li')
+      const t = e.target as HTMLElement
+      // Clicks inside the tile, on the prototype bar or in a dialog don't count as "outside".
+      if (!tile || tile.contains(t) || t.closest('.fixed')) return
+      approveRef.current()
+    }
+    document.addEventListener('mousedown', on)
+    return () => document.removeEventListener('mousedown', on)
+  }, [])
+
   return (
-    <div className="mt-2 space-y-3 border-t pt-2 text-sm">
-      <button className="float-right rounded bg-slate-800 px-2 text-xs text-white" onClick={() => nav({ step: undefined }, true)}>
-        Done editing
-      </button>
+    <div ref={ref} className="mt-2 space-y-3 border-t pt-2 text-sm">
+      <div className="float-right flex gap-1">
+        <button className="rounded bg-emerald-600 px-2 text-white" title="Save changes" onClick={approve}>
+          ✓
+        </button>
+        <button className="rounded border px-2" title="Discard changes" onClick={reject}>
+          ✕
+        </button>
+      </div>
+      {dirty && <div className="text-xs text-amber-700">Unsaved changes: ✓ or click outside saves, ✕ discards.</div>}
       <div className="flex flex-wrap gap-2">
         {(['Planned', 'Done', 'Cancelled'] as StepState[]).map((st) => (
           <button
             key={st}
             disabled={st === 'Planned' && !isOpen(p)}
-            className={`rounded border px-2 text-xs disabled:opacity-30 ${s.state === st ? 'bg-slate-800 text-white' : ''}`}
-            onClick={() => w(`mark ${st}`, (x) => (x.state = st))}
+            className={`rounded border px-2 text-xs disabled:opacity-30 ${draft.state === st ? 'bg-slate-800 text-white' : ''}`}
+            onClick={() => w((x) => (x.state = st))}
           >
             {st}
           </button>
         ))}
-        <input type="date" className="rounded border px-1 text-xs" value={s.day ?? ''} onChange={(e) => w('reschedule', (x) => (x.day = e.target.value || undefined))} />
-        <input type="time" className="rounded border px-1 text-xs" value={s.time ?? ''} onChange={(e) => w('set time', (x) => (x.time = e.target.value || undefined))} />
+        <input type="date" className="rounded border px-1 text-xs" value={draft.day ?? ''} onChange={(e) => w((x) => (x.day = e.target.value || undefined))} />
+        <input type="time" className="rounded border px-1 text-xs" value={draft.time ?? ''} onChange={(e) => w((x) => (x.time = e.target.value || undefined))} />
         <label className="text-xs">
-          end <input type="date" className="rounded border px-1" value={s.endDay ?? ''} onChange={(e) => w('set end', (x) => (x.endDay = e.target.value || undefined))} />
+          end <input type="date" className="rounded border px-1" value={draft.endDay ?? ''} onChange={(e) => w((x) => (x.endDay = e.target.value || undefined))} />
         </label>
       </div>
       <div className="text-xs">
@@ -384,24 +418,44 @@ function StepDetail({ p, s }: { p: Process; s: Step }) {
           <label key={pt.personId} className="mr-2">
             <input
               type="checkbox"
-              checked={s.participants.includes(pt.personId)}
-              onChange={(e) => w('edit Step participants', (x) => (x.participants = e.target.checked ? [...x.participants, pt.personId] : x.participants.filter((i) => i !== pt.personId)))}
+              checked={draft.participants.includes(pt.personId)}
+              onChange={(e) => w((x) => (x.participants = e.target.checked ? [...x.participants, pt.personId] : x.participants.filter((i) => i !== pt.personId)))}
             />{' '}
             {personName(db, pt.personId)}
           </label>
         ))}
       </div>
-      <AttachDoc p={p} s={s} />
-      <Notes label="Step prep notes" value={s.prep} onSave={(v) => w('edit Step prep notes', (x) => (x.prep = v))} />
-      <Notes label="Reflection (yours, one per Step)" value={s.reflection} onSave={(v) => w('edit Reflection', (x) => (x.reflection = v))} />
+      {draft.docs.length > 0 && (
+        <div className="flex flex-wrap gap-1 text-xs">
+          {draft.docs.map((sd) => (
+            <span key={sd.docId} className="rounded border border-dashed px-1.5">
+              📄 {sd.fileName}{' '}
+              <button className="text-slate-400 hover:text-red-600" title="detach from this Step" onClick={() => w((x) => (x.docs = x.docs.filter((y) => y.docId !== sd.docId)))}>
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <AttachDoc attached={draft.docs.map((x) => x.docId)} onAttach={(docId, fileName) => w((x) => x.docs.push({ docId, fileName }))} />
+      <label className="block text-xs font-semibold">
+        Step prep notes
+        <textarea className="mt-1 w-full rounded border p-1 text-sm font-normal" rows={3} value={draft.prep} onChange={(e) => w((x) => (x.prep = e.target.value))} />
+      </label>
+      <label className="block text-xs font-semibold">
+        Reflection (yours, one per Step)
+        <textarea className="mt-1 w-full rounded border p-1 text-sm font-normal" rows={3} value={draft.reflection} onChange={(e) => w((x) => (x.reflection = e.target.value))} />
+      </label>
       <div>
         <div className="text-xs font-semibold">Feedback</div>
-        {s.feedback.map((f, i) => (
-          <div key={i} className="mt-1 rounded bg-slate-50 p-1 text-xs">
-            <span className="text-slate-500">
-              {fmtDay(f.day)} · {f.participantPersonId ? personName(db, f.participantPersonId) : (f.fromSide ?? 'unknown')}:
-            </span>{' '}
-            {f.text}
+        {draft.feedback.map((f, i) => (
+          <div key={i} className="mt-1 flex rounded bg-slate-50 p-1 text-xs">
+            <span className="flex-1">
+              <span className="text-slate-500">{fmtDay(f.day)} · {f.participantPersonId ? personName(db, f.participantPersonId) : (f.fromSide ?? 'unknown')}:</span> {f.text}
+            </span>
+            <button className="text-slate-400 hover:text-red-600" title="remove this Feedback" onClick={() => w((x) => x.feedback.splice(i, 1))}>
+              ×
+            </button>
           </div>
         ))}
         <div className="mt-1 flex gap-1 text-xs">
@@ -420,7 +474,7 @@ function StepDetail({ p, s }: { p: Process; s: Step }) {
             className="rounded border px-2"
             disabled={!fb}
             onClick={() => {
-              w('add Feedback', (x) =>
+              w((x) =>
                 x.feedback.push({
                   day: new Date().toISOString().slice(0, 10),
                   text: fb,
@@ -434,16 +488,46 @@ function StepDetail({ p, s }: { p: Process; s: Step }) {
           </button>
         </div>
       </div>
+      <div className="border-t pt-2 text-xs">
+        {s.origin ? (
+          <span className="text-slate-400">The Origin can’t be deleted: every Process has exactly one.</span>
+        ) : !deleting ? (
+          <button className="rounded border border-red-300 px-2 text-red-700" onClick={() => setDeleting(true)}>
+            Delete Step…
+          </button>
+        ) : (
+          <div className="rounded border-2 border-red-400 bg-red-50 p-2">
+            <div className="font-semibold">Delete this {s.kind} Step for good?</div>
+            <div className="mt-1">
+              Everything on it will be lost: its day and state, who took part, Step prep notes, the Reflection, {s.feedback.length} Feedback and {s.docs.length} Document attachment
+              {s.docs.length !== 1 && 's'}. The Documents themselves stay in rolegraph. If it just won’t happen, mark it Cancelled instead.
+            </div>
+            <div className="mt-2 flex gap-2">
+              <button
+                className="rounded bg-red-600 px-2 text-white"
+                onClick={() => {
+                  write(`delete ${s.kind} Step`, (d) => (P(d, p.id).steps = P(d, p.id).steps.filter((x) => x.id !== s.id)), p.id)
+                  nav({ step: undefined }, true)
+                }}
+              >
+                Delete Step
+              </button>
+              <button className="rounded border px-2" onClick={() => setDeleting(false)}>
+                Keep it
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
-function AttachDoc({ p, s }: { p: Process; s: Step }) {
+function AttachDoc({ attached, onAttach }: { attached: string[]; onAttach: (docId: string, fileName: string) => void }) {
   const { db, write } = useStore()
   const [open, setOpen] = useState(false)
   const [kind, setKind] = useState(db.docKinds[0])
   const [dir, setDir] = useState<'Sent' | 'Received'>('Sent')
-  const attach = (docId: string, fileName: string) => write('attach Document', (d) => S(d, p.id, s.id).docs.push({ docId, fileName }), p.id)
   if (!open)
     return (
       <button className="rounded border px-2 text-xs" onClick={() => setOpen(true)}>
@@ -454,9 +538,9 @@ function AttachDoc({ p, s }: { p: Process; s: Step }) {
     <div className="rounded border p-2 text-xs">
       <div className="font-semibold">Pick an existing Document</div>
       {db.docs
-        .filter((d) => !s.docs.some((x) => x.docId === d.id))
+        .filter((d) => !attached.includes(d.id))
         .map((d) => (
-          <button key={d.id} className="mr-1 mt-1 rounded border px-1.5 hover:bg-slate-100" onClick={() => attach(d.id, prompt('File name on this Step', 'file.pdf') ?? 'file.pdf')}>
+          <button key={d.id} className="mr-1 mt-1 rounded border px-1.5 hover:bg-slate-100" onClick={() => onAttach(d.id, prompt('File name on this Step', 'file.pdf') ?? 'file.pdf')}>
             {d.kind} · {d.direction} · sha {d.sha}
           </button>
         ))}
@@ -476,16 +560,10 @@ function AttachDoc({ p, s }: { p: Process; s: Step }) {
           onChange={(e) => {
             const f = e.target.files?.[0]
             if (!f) return
-            // Real app: hash the bytes; same bytes => existing Document is reused.
+            // Real app: hash the bytes; same bytes => existing Document is reused. The Document is stored now; attaching waits for ✓.
             const id = 'd-' + uid()
-            write(
-              'upload Document',
-              (d) => {
-                d.docs.push({ id, sha: uid() + '…' + uid().slice(0, 3), kind, direction: dir })
-                S(d, p.id, s.id).docs.push({ docId: id, fileName: f.name })
-              },
-              p.id,
-            )
+            write('upload Document', (d) => d.docs.push({ id, sha: uid() + '…' + uid().slice(0, 3), kind, direction: dir }))
+            onAttach(id, f.name)
             setOpen(false)
           }}
         />
