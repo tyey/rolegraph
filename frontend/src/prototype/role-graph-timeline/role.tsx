@@ -1,8 +1,8 @@
 // PROTOTYPE (tyey/rolegraph#13): Role page for layout C — cards and chips instead of form controls.
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import type { Db, Process } from './data'
 import { companyName, descendants, fmtDay, isOpen, roleName, StatePill, uid, useStore, wouldCycle } from './store'
-import { T } from './ui'
+import { AddChip, Chip, Icon, Stat, T, useOutside } from './ui'
 
 const hasCycle = (d: Db) => d.roles.some((r) => d.edges.some((e) => e.parent !== r.id && e.child === r.id && descendants(d, r.id).includes(e.parent)))
 
@@ -142,7 +142,7 @@ export function RolePage({ id }: { id: string }) {
   )
 }
 
-function ProcessCard({ p, showRole }: { p: Process; showRole: boolean }) {
+export function ProcessCard({ p, showRole }: { p: Process; showRole: boolean }) {
   const { db, nav } = useStore()
   const next = p.steps.find((s) => s.state === 'Planned')
   const last = [...p.steps].reverse().find((s) => s.state === 'Done')
@@ -234,71 +234,3 @@ function RoleMenu({ id, canDelete }: { id: string; canDelete: boolean }) {
   )
 }
 
-function Chip({ children, onClick, onRemove, big = false }: { children: ReactNode; onClick: () => void; onRemove: () => void; big?: boolean }) {
-  return (
-    <span className={`group inline-flex items-center gap-1 rounded-full border bg-white ${big ? 'px-3 py-1.5 text-sm' : 'px-2 py-0.5 text-xs'} hover:border-indigo-300`}>
-      <button className="font-medium text-slate-800" onClick={onClick}>
-        {children}
-      </button>
-      <button className="text-slate-300 opacity-0 group-hover:opacity-100 hover:text-red-600" title="Unlink" aria-label="Unlink" onClick={onRemove}>
-        ×
-      </button>
-    </span>
-  )
-}
-
-/** "+ label" chip that opens a filterable list of Roles; optionally creates a new Role from the typed text. */
-function AddChip({ label, options, onPick, onNew, big = false }: { label: string; options: { id: string; name: string }[]; onPick: (id: string) => void; onNew?: (name: string) => void; big?: boolean }) {
-  const [open, setOpen] = useState(false)
-  const [q, setQ] = useState('')
-  const ref = useOutside(() => setOpen(false))
-  const hits = options.filter((o) => o.name.toLowerCase().includes(q.toLowerCase()))
-  const done = () => (setOpen(false), setQ(''))
-  return (
-    <span ref={ref} className="relative inline-block">
-      <button className={`rounded-full border border-dashed border-slate-300 text-slate-500 hover:border-indigo-400 hover:text-indigo-700 ${big ? 'px-3 py-1.5 text-sm' : 'px-2 py-0.5 text-xs'}`} onClick={() => setOpen(!open)}>
-        + {label}
-      </button>
-      {open && (
-        <div className="absolute left-0 z-30 mt-1 w-64 rounded-lg border bg-white p-1 text-sm shadow-xl">
-          <input autoFocus className="mb-1 w-full rounded border px-2 py-1" placeholder="Role name" value={q} onChange={(e) => setQ(e.target.value)} />
-          {hits.map((o) => (
-            <button key={o.id} className="block w-full rounded px-3 py-1.5 text-left hover:bg-slate-100" onClick={() => (onPick(o.id), done())}>
-              {o.name}
-            </button>
-          ))}
-          {onNew && q.trim() && !options.some((o) => o.name.toLowerCase() === q.trim().toLowerCase()) && (
-            <button className="block w-full rounded px-3 py-1.5 text-left text-indigo-700 hover:bg-indigo-50" onClick={() => (onNew(q.trim()), done())}>
-              Create “{q.trim()}”
-            </button>
-          )}
-        </div>
-      )}
-    </span>
-  )
-}
-
-const Stat = ({ n, label }: { n: number; label: string }) => (
-  <div className="rounded-xl bg-slate-50 p-4">
-    <div className="text-2xl font-semibold text-slate-900">{n}</div>
-    <div className="text-xs text-slate-500">{label}</div>
-  </div>
-)
-
-const Icon = ({ d, w = 2, size = 16 }: { d: string; w?: number; size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={w} strokeLinecap="round" strokeLinejoin="round">
-    <path d={d} />
-  </svg>
-)
-
-function useOutside(close: () => void) {
-  const ref = useRef<HTMLSpanElement & HTMLDivElement>(null)
-  const cb = useRef(close)
-  cb.current = close
-  useEffect(() => {
-    const on = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && cb.current()
-    document.addEventListener('mousedown', on)
-    return () => document.removeEventListener('mousedown', on)
-  }, [])
-  return ref
-}

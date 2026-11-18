@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Db, Outcome, Process, Side, Status, Step, StepState } from './data'
 import { agencyName, companyName, DecisionMaker, fields, processState, STATE_STYLE, StatePill, fmtDay, isOpen, personName, roleName, timeline, uid, useStore } from './store'
-import { T } from './ui'
+import { AddChip, Avatar, Card, Menu, Stat, T } from './ui'
 
 const STATUSES: Status[] = ['Active', 'On hold', 'Offer received']
 const OUTCOMES: Outcome[] = ['Accepted', 'Declined', 'Rejected', 'Withdrawn', 'Ghosted']
@@ -102,92 +102,108 @@ export function ConflictBanner() {
   )
 }
 
-export function ProcessPanel({ id, wide = false }: { id: string; wide?: boolean }) {
+export function ProcessPanel({ id }: { id: string; wide?: boolean }) {
   const { db, write, nav, search } = useStore()
   const p = db.processes.find((x) => x.id === id)
   const [closing, setClosing] = useState(false)
-  if (!p) return <div className="p-4 text-slate-500">Pick a Process.</div>
+  const [moving, setMoving] = useState(false)
+  if (!p) return <div className="p-6 text-slate-400">Pick a Process.</div>
   const w = (what: string, fn: (d: Db) => void) => write(what, fn, p.id)
   const agency = agencyName(db, p)
+  const tl = timeline(p.steps)
+  const next = tl.find((s) => s.state === 'Planned')
+  const origin = tl.find((s) => s.origin)
 
   return (
-    <div className="space-y-4 p-4">
-      <header>
-        <div className={T.eyebrow}>
-          <button className="underline" onClick={() => nav({ role: p.roleId })}>
-            {roleName(db, p.roleId)}
-          </button>
-          {agency && <> · via Agency {agency}</>} · v{p.version}
+    <div className="mx-auto max-w-5xl space-y-8 p-6">
+      <header className="flex items-start gap-3">
+        <div className="flex-1">
+          <div className="mb-1 flex flex-wrap items-center gap-1 text-xs text-slate-500">
+            <button className="rounded-full border bg-white px-2 py-0.5 font-medium text-slate-800 hover:border-indigo-300" onClick={() => nav({ role: p.roleId, tab: 'role' })}>
+              {roleName(db, p.roleId)}
+            </button>
+            {agency && <span>via {agency}</span>}
+          </div>
+          <h2 className={T.page}>{companyName(db, p)}</h2>
+          {!p.companyId && <div className="mt-0.5 text-xs text-amber-700">The Agency hasn’t named the Company yet</div>}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {isOpen(p) ? (
+              <>
+                <select
+                  className={`cursor-pointer rounded-full border-0 px-3 py-1 text-xs font-medium ${STATE_STYLE[processState(p)].pill}`}
+                  value={p.status}
+                  onChange={(e) => w('change Status', (d) => (P(d, p.id).status = e.target.value as Status))}
+                >
+                  {STATUSES.map((s) => (
+                    <option key={s}>{s}</option>
+                  ))}
+                </select>
+                <button className="rounded-full border px-3 py-1 text-xs text-slate-600 hover:bg-slate-50" onClick={() => setClosing(true)}>
+                  Close Process
+                </button>
+              </>
+            ) : (
+              <>
+                <StatePill p={p} />
+                <button
+                  className="rounded-full border px-3 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                  onClick={() =>
+                    w('reopen', (d) => {
+                      P(d, p.id).outcome = undefined
+                      P(d, p.id).status = 'Active'
+                    })
+                  }
+                >
+                  Reopen
+                </button>
+              </>
+            )}
+          </div>
         </div>
-        <h2 className={T.page}>{companyName(db, p)}</h2>
-        {!p.companyId && <div className="text-xs text-amber-700">The Agency hasn’t named the Company yet.</div>}
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-          {isOpen(p) ? (
-            <>
-              <span className="text-xs text-slate-500">Open</span>
-              <select className={`rounded-full border-0 px-2 py-0.5 text-xs font-medium ${STATE_STYLE[processState(p)].pill}`} value={p.status} onChange={(e) => w('change Status', (d) => (P(d, p.id).status = e.target.value as Status))}>
-                {STATUSES.map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-              <button className="rounded border px-2" onClick={() => setClosing(true)}>
-                Close…
-              </button>
-            </>
-          ) : (
-            <>
-              <span className="text-xs text-slate-500">Closed</span>
-              <StatePill p={p} />
-              <button
-                className="rounded border px-2"
-                onClick={() =>
-                  w('reopen', (d) => {
-                    P(d, p.id).outcome = undefined
-                    P(d, p.id).status = 'Active'
-                  })
-                }
-              >
-                Reopen
-              </button>
-            </>
-          )}
-          <label className="ml-auto text-xs text-slate-500">
-            Reclassify to{' '}
-            <select className="rounded border" value={p.roleId} onChange={(e) => w('reclassify', (d) => (P(d, p.id).roleId = e.target.value))}>
-              {db.roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+        <Menu items={[['Move to another Role…', () => setMoving(true)]]} />
       </header>
 
+      {moving && (
+        <Card>
+          <div className="mb-2 flex items-center">
+            <span className={T.label}>Move to</span>
+            <button className="ml-auto text-slate-400 hover:text-slate-700" aria-label="Close" onClick={() => setMoving(false)}>
+              ×
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {db.roles
+              .filter((r) => r.id !== p.roleId)
+              .map((r) => (
+                <button
+                  key={r.id}
+                  className="rounded-full border px-3 py-1 text-sm hover:border-indigo-300 hover:bg-indigo-50"
+                  onClick={() => {
+                    w('reclassify', (d) => (P(d, p.id).roleId = r.id))
+                    setMoving(false)
+                  }}
+                >
+                  {r.name}
+                </button>
+              ))}
+          </div>
+        </Card>
+      )}
       {closing && <CloseDialog p={p} onDone={() => setClosing(false)} />}
 
-      {wide ? (
-        // Layout C: full-width stack, prep notes → Participants → Timeline.
-        <div className="space-y-6">
-          <Notes big label="Process prep notes" value={p.prep} onSave={(v) => w('edit Process prep notes', (d) => (P(d, p.id).prep = v))} />
-          <Participants p={p} />
-          <section>
-            <h3 className={`mb-2 ${T.section}`}>Timeline</h3>
-            <Timeline p={p} openStep={search.step} />
-            <AddStep p={p} />
-          </section>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <section>
-            <h3 className={`mb-2 ${T.section}`}>Timeline</h3>
-            <Timeline p={p} openStep={search.step} />
-            <AddStep p={p} />
-          </section>
-          <Notes label="Process prep notes" value={p.prep} onSave={(v) => w('edit Process prep notes', (d) => (P(d, p.id).prep = v))} />
-          <Participants p={p} />
-        </div>
-      )}
+      <div className="grid grid-cols-3 gap-3">
+        <Stat n={next ? next.kind : '—'} label={next ? `Next · ${fmtDay(next.day)}` : 'Nothing planned'} />
+        <Stat n={p.steps.filter((s) => s.state === 'Done').length} label="Steps done" />
+        <Stat n={origin?.day ? fmtDay(origin.day) : '—'} label={`Started · ${origin?.channel ?? ''}`} />
+      </div>
+
+      <Notes big label="Process prep notes" value={p.prep} onSave={(v) => w('edit Process prep notes', (d) => (P(d, p.id).prep = v))} />
+      <Participants p={p} />
+      <section>
+        <h3 className={`mb-3 ${T.section}`}>Timeline</h3>
+        <Timeline p={p} openStep={search.step} />
+        <AddStep p={p} />
+      </section>
     </div>
   )
 }
@@ -199,7 +215,7 @@ function CloseDialog({ p, onDone }: { p: Process; onDone: () => void }) {
   const [outcome, setOutcome] = useState<Outcome>(allowed[0])
   const [cancel, setCancel] = useState(true)
   return (
-    <div className="rounded border-2 border-slate-400 bg-slate-50 p-3 text-sm">
+    <div className="rounded-xl border bg-white p-4 text-sm shadow-sm">
       <div className="font-semibold">Close this Process</div>
       <div className="mt-2 flex flex-wrap gap-2">
         {allowed.map((o) => (
@@ -273,7 +289,7 @@ function Timeline({ p, openStep }: { p: Process; openStep?: string }) {
             {!s.day && !s.origin && prevDated && <div className="-ml-5 mb-2 text-xs uppercase tracking-wide text-slate-400">— not scheduled yet —</div>}
             <span className={`absolute -left-[9px] mt-1.5 h-4 w-4 rounded-full border-2 ${stateStyle[s.state]}`} />
             <div
-              className={`relative rounded border bg-white p-2 ${s.state === 'Cancelled' ? 'opacity-50' : ''} ${openStep === s.id ? 'ring-2 ring-indigo-400' : 'cursor-pointer hover:border-indigo-300'}`}
+              className={`relative rounded-xl border bg-white p-3 ${s.state === 'Cancelled' ? 'opacity-50' : ''} ${openStep === s.id ? 'ring-2 ring-indigo-400' : 'cursor-pointer hover:border-indigo-300'}`}
               onClick={() => openStep !== s.id && nav({ step: s.id }, true)}
             >
               <div className={`flex flex-wrap items-baseline gap-2 text-sm ${openStep === s.id ? 'pr-40' : ''}`}>
@@ -591,7 +607,7 @@ function AddStep({ p }: { p: Process }) {
   const open = isOpen(p)
   return (
     <div className="ml-8 mt-2 space-y-2 text-sm">
-      <div className="flex flex-wrap items-center gap-1 rounded border border-dashed p-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed p-3">
         <span className="text-xs font-semibold">+ Step</span>
         <select className="rounded border" value={kind} onChange={(e) => setKind(e.target.value)}>
           {db.stepKinds.map((k) => (
@@ -658,7 +674,7 @@ export function Notes({ label, value, onSave, big = false }: { label: string; va
     <div className="text-sm">
       <div className={big ? `mb-1 ${T.section}` : T.label}>{label}</div>
       {draft === undefined ? (
-        <button className={`mt-1 w-full whitespace-pre-wrap rounded bg-yellow-50 p-2 text-left ${big ? 'min-h-24 text-sm' : 'text-xs'}`} onClick={() => setDraft(value)}>
+        <button className={`mt-1 w-full whitespace-pre-wrap bg-yellow-50 text-left ${big ? 'min-h-24 rounded-xl p-4 text-sm' : 'rounded p-2 text-xs'}`} onClick={() => setDraft(value)}>
           {value || <span className="text-slate-400">click to write…</span>}
         </button>
       ) : (
@@ -690,113 +706,125 @@ function Participants({ p }: { p: Process }) {
   const w = (what: string, fn: (d: Db) => void) => write(what, fn, p.id)
   const match = link ? db.persons.find((x) => x.links.includes(link.trim())) : undefined
   const free = db.persons.filter((x) => !p.participants.some((pt) => pt.personId === x.id))
+  const addExisting = (personId: string) => {
+    w('add Participant', (d) => P(d, p.id).participants.push({ personId, side: 'Company', parts: ['Interviewer'], decisionMaker: false }))
+    setAdding(false)
+    setLink('')
+    setName('')
+  }
   return (
-    <div className="text-sm">
-      <div className={`mb-1 ${T.section}`}>Participants</div>
-      <table className={`mt-1 ${T.table}`}>
-        <thead className={T.thead}>
-          <tr>
-            <th>Person</th>
-            <th>Speaks for</th>
-            <th>Parts</th>
-            <th>Decision maker</th>
-          </tr>
-        </thead>
-        <tbody>
-          {p.participants.map((pt, i) => (
-            <tr key={pt.personId} className="border-t align-top">
-              <td className="py-1">
-                <button className="underline" onClick={() => nav({ person: pt.personId })}>
-                  {personName(db, pt.personId)}
-                </button>
-              </td>
-              <td>
-                <select className="rounded border" value={pt.side} onChange={(e) => w('edit side', (d) => (P(d, p.id).participants[i].side = e.target.value as Side))}>
-                  {SIDES.map((s) => (
-                    <option key={s} value={s}>
-                      {s === 'none' ? 'speaks for no one' : `for ${s}`}
-                    </option>
-                  ))}
-                </select>
-              </td>
-              <td>
+    <section>
+      <h3 className={`mb-3 ${T.section}`}>Participants</h3>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
+        {p.participants.map((pt, i) => {
+          const person = db.persons.find((x) => x.id === pt.personId)!
+          return (
+            <Card key={pt.personId} className="space-y-3">
+              <div className="flex items-start gap-3">
+                <Avatar name={personName(db, pt.personId)} placeholder={!person.name} />
+                <div className="min-w-0 flex-1">
+                  <button className="block w-full truncate text-left font-semibold text-slate-900 hover:text-indigo-700" title={personName(db, pt.personId)} onClick={() => nav({ person: pt.personId })}>
+                    {personName(db, pt.personId)}
+                  </button>
+                  <select
+                    className="-ml-1 cursor-pointer rounded border-0 bg-transparent px-1 text-xs text-slate-500 hover:bg-slate-100"
+                    value={pt.side}
+                    onChange={(e) => w('edit side', (d) => (P(d, p.id).participants[i].side = e.target.value as Side))}
+                  >
+                    {SIDES.map((s) => (
+                      <option key={s} value={s}>
+                        {s === 'none' ? 'Speaks for no one' : `For the ${s}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <Menu
+                  items={[
+                    [
+                      'Remove from this Process',
+                      () =>
+                        w('remove Participant', (d) => {
+                          const x = P(d, p.id)
+                          x.participants = x.participants.filter((y) => y.personId !== pt.personId)
+                          x.steps.forEach((s) => (s.participants = s.participants.filter((y) => y !== pt.personId)))
+                        }),
+                      { danger: true },
+                    ],
+                  ]}
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-1">
                 {pt.parts.map((part) => (
-                  <span key={part} className="mr-1 inline-flex items-center gap-0.5 rounded bg-slate-100 px-1.5">
+                  <span key={part} className="group inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
                     {part}
-                    <button
-                      className="text-slate-400 hover:text-red-600 disabled:opacity-30"
-                      disabled={pt.parts.length === 1}
-                      title={pt.parts.length === 1 ? 'A Participant needs at least one Part' : `remove ${part}`}
-                      onClick={() => w('remove Part', (d) => (P(d, p.id).participants[i].parts = pt.parts.filter((x) => x !== part)))}
-                    >
-                      ×
-                    </button>
+                    {pt.parts.length > 1 && (
+                      <button className="text-slate-400 opacity-0 group-hover:opacity-100 hover:text-red-600" aria-label={`Remove ${part}`} onClick={() => w('remove Part', (d) => (P(d, p.id).participants[i].parts = pt.parts.filter((x) => x !== part)))}>
+                        ×
+                      </button>
+                    )}
                   </span>
                 ))}
-                <select
-                  className="ml-1 w-5 rounded border"
-                  value=""
-                  title="add a Part"
-                  onChange={(e) => w('add Part', (d) => P(d, p.id).participants[i].parts.push(e.target.value))}
-                >
-                  <option value="">+</option>
-                  {db.parts
-                    .filter((x) => !pt.parts.includes(x))
-                    .map((x) => (
-                      <option key={x}>{x}</option>
-                    ))}
-                </select>
-              </td>
-              <td>
-                <label title="Has a say in whether you are hired" className="flex items-center gap-1">
-                  <input type="checkbox" checked={pt.decisionMaker} onChange={(e) => w('mark Decision maker', (d) => (P(d, p.id).participants[i].decisionMaker = e.target.checked))} />
-                  {pt.decisionMaker && <DecisionMaker />}
-                </label>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {!adding ? (
-        <button className="mt-1 rounded border px-2 text-xs" onClick={() => setAdding(true)}>
-          + Participant
-        </button>
-      ) : (
-        <div className="mt-1 space-y-1 rounded border p-2 text-xs">
-          <div>Existing Person:</div>
-          {free.map((x) => (
-            <button
-              key={x.id}
-              className="mr-1 rounded bg-slate-100 px-1.5"
-              onClick={() => {
-                w('add Participant', (d) => P(d, p.id).participants.push({ personId: x.id, side: 'Company', parts: ['Interviewer'], decisionMaker: false }))
-                setAdding(false)
-              }}
-            >
-              {personName(db, x.id)}
-            </button>
-          ))}
-          <div className="pt-1">…or a new Person (name or placeholder description, plus a Profile link):</div>
-          <input className="w-full rounded border px-1" placeholder="Name, or e.g. “the hiring manager’s boss”" value={name} onChange={(e) => setName(e.target.value)} />
-          <input className="w-full rounded border px-1" placeholder="Profile link (try linkedin.example/in/mirasol)" value={link} onChange={(e) => setLink(e.target.value)} />
-          {match && (
-            <div className="rounded bg-amber-50 p-1">
-              That Profile link already belongs to <b>{personName(db, match.id)}</b>. Same human?{' '}
+                <AddChip
+                  label="Part"
+                  placeholder="Part"
+                  options={db.parts.filter((x) => !pt.parts.includes(x)).map((x) => ({ id: x, name: x }))}
+                  onPick={(x) => w('add Part', (d) => P(d, p.id).participants[i].parts.push(x))}
+                  onNew={(x) =>
+                    w('add new Part', (d) => {
+                      d.parts.push(x)
+                      P(d, p.id).participants[i].parts.push(x)
+                    })
+                  }
+                />
+              </div>
               <button
-                className="rounded bg-amber-600 px-1.5 text-white"
-                onClick={() => {
-                  w('add Participant', (d) => P(d, p.id).participants.push({ personId: match.id, side: 'Company', parts: ['Interviewer'], decisionMaker: false }))
-                  setAdding(false)
-                  setLink('')
-                }}
+                className={pt.decisionMaker ? '' : 'rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-xs text-slate-500 hover:border-indigo-400 hover:text-indigo-700'}
+                title={pt.decisionMaker ? 'Click to unmark' : 'Has a say in whether you are hired'}
+                onClick={() => w('mark Decision maker', (d) => (P(d, p.id).participants[i].decisionMaker = !pt.decisionMaker))}
               >
+                {pt.decisionMaker ? <DecisionMaker /> : '⚖︎ Mark decision maker'}
+              </button>
+            </Card>
+          )
+        })}
+        {!adding && (
+          <button className="flex min-h-32 items-center justify-center rounded-xl border border-dashed border-slate-300 text-sm text-slate-500 hover:border-indigo-400 hover:text-indigo-700" onClick={() => setAdding(true)}>
+            + Add participant
+          </button>
+        )}
+      </div>
+      {adding && (
+        <Card className="mt-3 space-y-3">
+          <div className="flex items-center">
+            <span className={T.label}>Add participant</span>
+            <button className="ml-auto text-slate-400 hover:text-slate-700" aria-label="Close" onClick={() => setAdding(false)}>
+              ×
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {free.map((x) => (
+              <button key={x.id} className="flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-sm hover:border-indigo-300 hover:bg-indigo-50" onClick={() => addExisting(x.id)}>
+                <span className="scale-75">
+                  <Avatar name={personName(db, x.id)} placeholder={!x.name} />
+                </span>
+                {personName(db, x.id)}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input className="rounded-md border px-2 py-1.5 text-sm" placeholder="New person, or a description like “the hiring manager’s boss”" value={name} onChange={(e) => setName(e.target.value)} />
+            <input className="rounded-md border px-2 py-1.5 text-sm" placeholder="Profile link" value={link} onChange={(e) => setLink(e.target.value)} />
+          </div>
+          {match && (
+            <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-900">
+              This link belongs to <b>{personName(db, match.id)}</b>
+              <button className="rounded-full bg-amber-600 px-2 py-0.5 text-white" onClick={() => addExisting(match.id)}>
                 Use {personName(db, match.id)}
-              </button>{' '}
-              or create a separate Person anyway ↓
+              </button>
             </div>
           )}
           <button
-            className="rounded bg-indigo-600 px-2 text-white disabled:opacity-40"
+            className="rounded-full bg-indigo-600 px-4 py-1.5 text-sm text-white disabled:opacity-40"
             disabled={!name}
             onClick={() => {
               const id = 'p-' + uid()
@@ -810,13 +838,10 @@ function Participants({ p }: { p: Process }) {
               setLink('')
             }}
           >
-            Create Person
+            Create person
           </button>
-          <button className="ml-1" onClick={() => setAdding(false)}>
-            Cancel
-          </button>
-        </div>
+        </Card>
       )}
-    </div>
+    </section>
   )
 }
