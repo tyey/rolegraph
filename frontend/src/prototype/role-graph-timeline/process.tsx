@@ -260,9 +260,12 @@ function Timeline({ p, openStep }: { p: Process; openStep?: string }) {
           <li key={s.id} className="mb-3 ml-5">
             {!s.day && !s.origin && prevDated && <div className="-ml-5 mb-2 text-xs uppercase tracking-wide text-slate-400">— not scheduled yet —</div>}
             <span className={`absolute -left-[9px] mt-1.5 h-4 w-4 rounded-full border-2 ${stateStyle[s.state]}`} />
-            <div className={`rounded border bg-white p-2 ${s.state === 'Cancelled' ? 'opacity-50' : ''} ${openStep === s.id ? 'ring-2 ring-indigo-400' : ''}`}>
+            <div
+              className={`rounded border bg-white p-2 ${s.state === 'Cancelled' ? 'opacity-50' : ''} ${openStep === s.id ? 'ring-2 ring-indigo-400' : 'cursor-pointer hover:border-indigo-300'}`}
+              onClick={() => openStep !== s.id && nav({ step: s.id }, true)}
+            >
               <div className="flex flex-wrap items-baseline gap-2 text-sm">
-                <button className={`font-semibold ${s.state === 'Cancelled' ? 'line-through' : ''}`} onClick={() => nav({ step: openStep === s.id ? undefined : s.id }, true)}>
+                <button className={`font-semibold ${s.state === 'Cancelled' ? 'line-through' : ''}`} >
                   {s.kind}
                 </button>
                 {s.origin && <span className="rounded bg-indigo-100 px-1.5 text-xs text-indigo-800">Origin · {s.channel}</span>}
@@ -287,7 +290,7 @@ function Timeline({ p, openStep }: { p: Process; openStep?: string }) {
               </div>
               <div className="mt-1 flex flex-wrap gap-1 text-xs">
                 {s.participants.map((pid) => (
-                  <button key={pid} className="rounded bg-slate-100 px-1.5 hover:bg-slate-200" onClick={() => nav({ person: pid })}>
+                  <button key={pid} className="rounded bg-slate-100 px-1.5 hover:bg-slate-200" onClick={(e) => (e.stopPropagation(), nav({ person: pid }))}>
                     {personName(db, pid)}
                   </button>
                 ))}
@@ -299,11 +302,35 @@ function Timeline({ p, openStep }: { p: Process; openStep?: string }) {
                     </span>
                   )
                 })}
-                {!!s.feedback.length && <span className="text-slate-500">💬 {s.feedback.length} Feedback</span>}
-                {s.reflection && <span className="text-slate-500">✎ Reflection</span>}
-                {s.prep && <span className="text-slate-500">📝 Prep</span>}
               </div>
-              {openStep === s.id && <StepDetail p={p} s={s} />}
+              {openStep === s.id ? (
+                <StepDetail p={p} s={s} />
+              ) : (
+                (s.prep || s.reflection || s.feedback.length > 0) && (
+                  <div className="mt-2 space-y-1 border-t pt-1 text-xs">
+                    {s.prep && (
+                      <div className="whitespace-pre-wrap">
+                        <span className="font-semibold text-slate-500">Prep notes · </span>
+                        {s.prep}
+                      </div>
+                    )}
+                    {s.reflection && (
+                      <div className="whitespace-pre-wrap">
+                        <span className="font-semibold text-slate-500">Reflection · </span>
+                        {s.reflection}
+                      </div>
+                    )}
+                    {s.feedback.map((f, k) => (
+                      <div key={k}>
+                        <span className="font-semibold text-slate-500">
+                          Feedback · {fmtDay(f.day)} · {f.participantPersonId ? personName(db, f.participantPersonId) : (f.fromSide ?? 'unknown')}:{' '}
+                        </span>
+                        {f.text}
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
             </div>
           </li>
         )
@@ -313,12 +340,15 @@ function Timeline({ p, openStep }: { p: Process; openStep?: string }) {
 }
 
 function StepDetail({ p, s }: { p: Process; s: Step }) {
-  const { db, write } = useStore()
+  const { db, write, nav } = useStore()
   const w = (what: string, fn: (st: Step) => void) => write(what, (d) => fn(S(d, p.id, s.id)), p.id)
   const [fb, setFb] = useState('')
   const [fbBy, setFbBy] = useState('')
   return (
     <div className="mt-2 space-y-3 border-t pt-2 text-sm">
+      <button className="float-right rounded bg-slate-800 px-2 text-xs text-white" onClick={() => nav({ step: undefined }, true)}>
+        Done editing
+      </button>
       <div className="flex flex-wrap gap-2">
         {(['Planned', 'Done', 'Cancelled'] as StepState[]).map((st) => (
           <button
@@ -568,6 +598,14 @@ function Participants({ p }: { p: Process }) {
     <div className="text-sm">
       <div className="text-xs font-semibold">Participants</div>
       <table className="mt-1 w-full text-xs">
+        <thead className="text-left text-[10px] uppercase text-slate-400">
+          <tr>
+            <th>Person</th>
+            <th>speaks for</th>
+            <th>Parts</th>
+            <th>Decision maker</th>
+          </tr>
+        </thead>
         <tbody>
           {p.participants.map((pt, i) => (
             <tr key={pt.personId} className="border-t align-top">
@@ -602,8 +640,9 @@ function Participants({ p }: { p: Process }) {
                 </select>
               </td>
               <td>
-                <label title="Decision maker">
-                  <input type="checkbox" checked={pt.decisionMaker} onChange={(e) => w('mark Decision maker', (d) => (P(d, p.id).participants[i].decisionMaker = e.target.checked))} /> ⚖︎
+                <label title="Has a say in whether you are hired" className="flex items-center gap-1">
+                  <input type="checkbox" checked={pt.decisionMaker} onChange={(e) => w('mark Decision maker', (d) => (P(d, p.id).participants[i].decisionMaker = e.target.checked))} />
+                  {pt.decisionMaker && <span className="text-amber-700">⚖︎ yes</span>}
                 </label>
               </td>
             </tr>

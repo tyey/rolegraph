@@ -1,8 +1,9 @@
 // PROTOTYPE (tyey/rolegraph#13): three structurally different layouts for the same data.
 import type { ReactNode } from 'react'
 import { RoleGraph } from './graph'
-import { ListsPanel, PersonView, ProcessList, SearchBox, SearchResults } from './misc'
+import { ListsPanel, PeopleList, PersonView, ProcessList, SearchBox, SearchResults } from './misc'
 import { ProcessPanel } from './process'
+import { RolePage } from './role'
 import { companyName, descendants, isOpen, roleName, useStore } from './store'
 
 function TopBar({ children }: { children?: ReactNode }) {
@@ -98,7 +99,7 @@ export function VariantC() {
     const ps = db.processes.filter((p) => p.roleId === id)
     return (
       <div style={{ paddingLeft: depth * 12 }}>
-        <button className={`block w-full truncate rounded px-1 text-left text-sm font-semibold ${search.role === id ? 'bg-indigo-100' : ''}`} onClick={() => nav({ role: id, tab: undefined })}>
+        <button className={`block w-full truncate rounded px-1 text-left text-sm font-semibold ${search.role === id ? 'bg-indigo-100' : ''}`} onClick={() => nav({ role: id, tab: 'role' })}>
           {roleName(db, id)}
           {others.length > 0 && <span className="ml-1 text-xs font-normal text-slate-400">↗ also under {others.map((o) => roleName(db, o)).join(', ')}</span>}
         </button>
@@ -129,15 +130,17 @@ export function VariantC() {
       </nav>
       <main className="flex flex-1 flex-col overflow-hidden">
         <div className="flex gap-4 border-b px-4 pt-2 text-sm">
-          {(['process', 'person', 'graph', 'search', 'lists'] as const).map((t) => (
+          {(['role', 'process', 'person', 'people', 'graph', 'search', 'lists'] as const).map((t) => (
             <button key={t} className={`pb-2 ${tab === t ? 'border-b-2 border-indigo-600 font-semibold' : 'text-slate-500'}`} onClick={() => nav({ tab: t === 'process' || t === 'person' ? undefined : t, ...(t === 'process' ? { person: undefined } : {}) })}>
-              {t === 'process' ? 'Process' : t === 'person' ? 'Person' : t === 'graph' ? 'Role graph' : t === 'search' ? 'Search' : 'Lists'}
+              {t === 'role' ? 'Role' : t === 'process' ? 'Process' : t === 'person' ? 'Person' : t === 'people' ? 'People' : t === 'graph' ? 'Role graph' : t === 'search' ? 'Search' : 'Lists'}
             </button>
           ))}
         </div>
         <div className="flex-1 overflow-y-auto">
+          {tab === 'role' && (search.role ? <RolePage id={search.role} /> : <div className="p-6 text-slate-400">Pick a Role in the outline.</div>)}
           {tab === 'process' && (search.process ? <ProcessPanel id={search.process} wide /> : <div className="p-6 text-slate-400">Pick a Process in the outline.</div>)}
           {tab === 'person' && (search.person ? <PersonView id={search.person} /> : <div className="p-6 text-slate-400">Click a Person on a Process.</div>)}
+          {tab === 'people' && <PeopleList />}
           {tab === 'graph' && <RoleGraph onOpenProcess={(id) => nav({ process: id, tab: undefined })} />}
           {tab === 'search' && (
             <div className="p-4">

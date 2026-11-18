@@ -69,10 +69,10 @@ export function PersonView({ id }: { id: string }) {
   )
 }
 
-function MergePersons({ a, onDone }: { a: string; onDone: () => void }) {
+export function MergePersons({ a, initialB, onDone }: { a: string; initialB?: string; onDone: () => void }) {
   const { db, write, nav } = useStore()
   const others = db.persons.filter((x) => x.id !== a)
-  const [b, setB] = useState(others[0]?.id)
+  const [b, setB] = useState(initialB ?? others[0]?.id)
   const [survivor, setSurvivor] = useState(a)
   const folded = survivor === a ? b : a
   const moving = db.processes.filter((p) => p.participants.some((pt) => pt.personId === folded))
@@ -233,7 +233,7 @@ export function ProcessList({ roleIds, includeClosed = true }: { roleIds: string
         {ps.map((p) => {
           const next = p.steps.find((s) => s.state === 'Planned')
           return (
-            <tr key={p.id} className={`cursor-pointer border-t hover:bg-slate-50 ${search.process === p.id ? 'bg-indigo-50' : ''} ${isOpen(p) ? '' : 'text-slate-400'}`} onClick={() => nav({ process: p.id, person: undefined, step: undefined })}>
+            <tr key={p.id} className={`cursor-pointer border-t hover:bg-slate-50 ${search.process === p.id ? 'bg-indigo-50' : ''} ${isOpen(p) ? '' : 'text-slate-400'}`} onClick={() => nav({ process: p.id, person: undefined, step: undefined, tab: undefined })}>
               <td className="py-1.5">
                 {companyName(db, p)}
                 {p.agencyId && <span className="text-xs text-slate-400"> via {agencyName(db, p)}</span>}
@@ -316,6 +316,63 @@ export function ListsPanel() {
       >
         + add
       </button>
+    </div>
+  )
+}
+
+export function PeopleList() {
+  const { db, nav } = useStore()
+  const [picked, setPicked] = useState<string[]>([])
+  const dupOf = (id: string) => {
+    const me = db.persons.find((x) => x.id === id)!
+    return db.persons.filter((x) => x.id !== id && x.links.some((l) => me.links.includes(l)))
+  }
+  const rows = [...db.persons].sort((a, b) => Number(dupOf(b.id).length > 0) - Number(dupOf(a.id).length > 0) || personName(db, a.id).localeCompare(personName(db, b.id)))
+  return (
+    <div className="space-y-3 p-4 text-sm">
+      <div className="flex items-center gap-3">
+        <h2 className="text-lg font-bold">People</h2>
+        <span className="text-xs text-slate-500">Tick two to Merge them.</span>
+      </div>
+      <table className="w-full text-xs">
+        <thead className="text-left text-slate-500">
+          <tr>
+            <th className="w-6" />
+            <th>Person</th>
+            <th>Profile links</th>
+            <th>Processes</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((x) => {
+            const n = db.processes.filter((p) => p.participants.some((pt) => pt.personId === x.id)).length
+            const dups = dupOf(x.id)
+            return (
+              <tr key={x.id} className={`border-t ${dups.length ? 'bg-amber-50' : ''}`}>
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={picked.includes(x.id)}
+                    disabled={!picked.includes(x.id) && picked.length >= 2}
+                    onChange={(e) => setPicked((ps) => (e.target.checked ? [...ps, x.id] : ps.filter((i) => i !== x.id)))}
+                  />
+                </td>
+                <td className="py-1">
+                  <button className="underline" onClick={() => nav({ person: x.id, tab: undefined })}>
+                    {personName(db, x.id)}
+                  </button>
+                  {!x.name && <span className="ml-1 rounded bg-slate-200 px-1 text-[10px]">placeholder</span>}
+                </td>
+                <td className="text-slate-500">{x.links.join(', ') || '—'}</td>
+                <td>{n}</td>
+                <td className="text-amber-700">{dups.length > 0 && `possible duplicate of ${dups.map((d) => personName(db, d.id)).join(', ')}`}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+      {picked.length === 2 && <MergePersons a={picked[0]} initialB={picked[1]} onDone={() => setPicked([])} />}
     </div>
   )
 }
