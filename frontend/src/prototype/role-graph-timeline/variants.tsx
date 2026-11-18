@@ -5,7 +5,7 @@ import { ListsPanel, PeopleList, PersonView, ProcessList, SearchBox, SearchResul
 import { ProcessPanel } from './process'
 import { RolePage } from './role'
 import { companyName, descendants, isOpen, processState, roleName, STATE_STYLE, useStore } from './store'
-import { T } from './ui'
+import { Icon, T } from './ui'
 
 function TopBar({ children }: { children?: ReactNode }) {
   const { nav } = useStore()
@@ -169,13 +169,21 @@ export function VariantC() {
         </div>
       </nav>
       <main className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex gap-4 border-b px-4 pt-2 text-sm">
-          {(['role', 'process', 'people', 'graph', 'search', 'lists'] as const).map((t) => (
-            <button key={t} className={`pb-2 ${tab === t ? 'border-b-2 border-indigo-600 font-semibold' : 'text-slate-500'}`} onClick={() => nav({ tab: t === 'process' ? undefined : t, ...(t === 'process' ? { person: undefined } : {}) })}>
-              {t === 'role' ? 'Role' : t === 'process' ? 'Process' : t === 'people' ? 'People' : t === 'graph' ? 'Role graph' : t === 'search' ? 'Search' : 'Lists'}
-            </button>
+        <nav className="flex items-center gap-1 border-b bg-white px-6 py-2.5">
+          {TABS.map(([t, label, icon], i) => (
+            <span key={t} className="contents">
+              {i === 4 && <span className="mx-2 h-5 w-px bg-slate-200" />}
+              <button
+                className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm transition ${tab === t ? 'bg-indigo-50 font-medium text-indigo-800' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+                aria-current={tab === t ? 'page' : undefined}
+                onClick={() => nav({ tab: t === 'process' ? undefined : t, ...(t === 'process' ? { person: undefined } : {}) })}
+              >
+                <Icon d={icon} size={15} />
+                {label}
+              </button>
+            </span>
           ))}
-        </div>
+        </nav>
         <div className="flex-1 overflow-y-auto">
           {tab === 'role' && (search.role ? <RolePage id={search.role} /> : <div className="p-6 text-slate-400">Pick a Role in the outline.</div>)}
           {tab === 'process' && (search.process ? <ProcessPanel id={search.process} wide /> : <div className="p-6 text-slate-400">Pick a Process in the outline.</div>)}
@@ -242,3 +250,13 @@ function HeaderPanel({ label, children }: { label: string; children: ReactNode }
     </div>
   )
 }
+
+// Content tabs first, then tools (Search, Lists) after a divider. Icon paths are lucide-style stand-ins.
+const TABS = [
+  ['role', 'Role', 'M20 7h-9M14 17H5M17 17a3 3 0 1 0 0-.01M7 7a3 3 0 1 0 0-.01'],
+  ['process', 'Process', 'M3 12h4l3-8 4 16 3-8h4'],
+  ['people', 'People', 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8'],
+  ['graph', 'Role graph', 'M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6M18 9a9 9 0 0 1-9 9'],
+  ['search', 'Search', 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M21 21l-4.3-4.3'],
+  ['lists', 'Lists', 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01'],
+] as const
