@@ -1,5 +1,5 @@
 // PROTOTYPE (tyey/rolegraph#13): Role page for layout C — cards and chips instead of form controls.
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { Db, Process } from './data'
 import { companyName, descendants, fmtDay, isOpen, roleName, StatePill, uid, useStore, wouldCycle } from './store'
 import { AddChip, Chip, Icon, Stat, T, useOutside } from './ui'
@@ -142,7 +142,7 @@ export function RolePage({ id }: { id: string }) {
   )
 }
 
-export function ProcessCard({ p, showRole }: { p: Process; showRole: boolean }) {
+export function ProcessCard({ p, showRole, children }: { p: Process; showRole: boolean; children?: ReactNode }) {
   const { db, nav } = useStore()
   const next = p.steps.find((s) => s.state === 'Planned')
   const last = [...p.steps].reverse().find((s) => s.state === 'Done')
@@ -167,6 +167,7 @@ export function ProcessCard({ p, showRole }: { p: Process; showRole: boolean }) 
           </>
         ) : null}
       </div>
+      {children}
     </button>
   )
 }

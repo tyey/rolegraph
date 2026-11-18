@@ -191,7 +191,7 @@ export function VariantC() {
           )}
           {tab === 'graph' && <RoleGraph onOpenProcess={(id) => nav({ process: id, tab: undefined })} />}
           {tab === 'search' && (
-            <div className="p-4">
+            <div className="p-6">
               <SearchResults />
             </div>
           )}

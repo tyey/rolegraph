@@ -1,82 +1,96 @@
 // PROTOTYPE (tyey/rolegraph#13): Person view + Merge, search, editable lists.
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Db } from './data'
 import { agencyName, companyName, DecisionMaker, StatePill, fmtDay, isOpen, likelyDuplicates, personName, processTitle, roleName, useStore } from './store'
-import { T } from './ui'
+import { ProcessCard } from './role'
+import { AddChip, Avatar, Card, Icon, Menu, Segmented, Stat, T } from './ui'
 
 export function PersonView({ id }: { id: string }) {
-  const { db, write, nav } = useStore()
+  const { db, write } = useStore()
   const [merging, setMerging] = useState(false)
+  const [naming, setNaming] = useState(false)
+  const top = useRef<HTMLDivElement>(null)
+  useEffect(() => top.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), [id]) // the pane sits below the People list
   const person = db.persons.find((x) => x.id === id)
-  if (!person) return <div className="p-4 text-slate-500">That Person was Merged away.</div>
+  if (!person) return <div className="p-6 text-slate-400">That Person was Merged away.</div>
   const places = db.processes.flatMap((p) => p.participants.filter((pt) => pt.personId === id).map((pt) => ({ p, pt })))
   const sameLink = likelyDuplicates(db, id)
+  const orgs = new Set(places.map(({ p, pt }) => (pt.side === 'Agency' ? agencyName(db, p) : pt.side === 'none' ? '' : companyName(db, p))).filter(Boolean))
   return (
-    <div className="space-y-3 p-4 text-sm">
-      <div className={T.eyebrow}>Person</div>
-      <h2 className={T.page}>{person.name ?? <span className="italic">“{person.description}”</span>}</h2>
-      {!person.name && (
-        <button
-          className="rounded border px-2 text-xs"
-          onClick={() => {
-            const name = prompt('Name this placeholder')
-            if (name) write('name placeholder', (d) => (d.persons.find((x) => x.id === id)!.name = name))
-          }}
-        >
-          Name this placeholder…
-        </button>
-      )}
-      <div className="text-xs text-slate-600">
-        Profile links: <ProfileLinks links={person.links} />
-      </div>
+    <div ref={top} className="mx-auto max-w-5xl scroll-mt-4 space-y-8 p-6">
+      <header className="flex items-start gap-4">
+        <span className="scale-125">
+          <Avatar name={personName(db, id)} placeholder={!person.name} />
+        </span>
+        <div className="flex-1">
+          {naming ? (
+            <input
+              autoFocus
+              placeholder="Their name"
+              defaultValue={person.name ?? ''}
+              className={`${T.page} w-full rounded border border-indigo-300 px-1`}
+              onBlur={(e) => {
+                const n = e.target.value.trim()
+                if (n) write('name Person', (d) => (d.persons.find((x) => x.id === id)!.name = n))
+                setNaming(false)
+              }}
+              onKeyDown={(e) => (e.key === 'Enter' ? e.currentTarget.blur() : e.key === 'Escape' && setNaming(false))}
+            />
+          ) : (
+            <h2 className={`${T.page} group flex items-center gap-2`}>
+              {person.name ?? <span className="italic text-slate-500">“{person.description}”</span>}
+              <button className="text-slate-300 opacity-0 transition group-hover:opacity-100 hover:text-slate-600" title={person.name ? 'Rename' : 'Name this placeholder'} aria-label="Rename" onClick={() => setNaming(true)}>
+                <Icon d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </button>
+            </h2>
+          )}
+          {!person.name && <div className="mt-0.5 text-xs text-slate-500">Placeholder</div>}
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <ProfileLinks links={person.links} />
+          </div>
+        </div>
+        <Menu items={[['Merge with another person…', () => setMerging(true)]]} />
+      </header>
+
       {sameLink.length > 0 && (
-        <div className="rounded bg-amber-50 p-2 text-xs">
-          Shares a Profile link with <b>{sameLink.map((x) => personName(db, x.id)).join(', ')}</b>. Same human?{' '}
-          <button className="rounded bg-amber-600 px-1.5 text-white" onClick={() => setMerging(true)}>
-            Merge…
-          </button>
-          <button
-            className="ml-1 rounded border border-amber-600 px-1.5 text-amber-800"
-            onClick={() => write('mark not duplicates', (d) => sameLink.forEach((o) => d.notDuplicates.push([id, o.id])))}
-          >
-            Not the same person
-          </button>
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+          Same person as <b>{sameLink.map((x) => personName(db, x.id)).join(', ')}</b>? They share a Profile link.
+          <span className="ml-auto flex gap-2">
+            <button className="rounded-full bg-amber-600 px-3 py-1 text-xs text-white" onClick={() => setMerging(true)}>
+              Merge
+            </button>
+            <button className="rounded-full border border-amber-400 px-3 py-1 text-xs" onClick={() => write('mark not duplicates', (d) => sameLink.forEach((o) => d.notDuplicates.push([id, o.id])))}>
+              Not the same
+            </button>
+          </span>
         </div>
       )}
-      <table className={T.table}>
-        <thead className={T.thead}>
-          <tr>
-            <th>Process</th>
-            <th>Spoke for</th>
-            <th>Parts</th>
-            <th>Decision maker</th>
-            <th>State</th>
-          </tr>
-        </thead>
-        <tbody>
+      {merging && <MergePersons a={id} initialB={sameLink[0]?.id} onDone={() => setMerging(false)} />}
+
+      <div className="grid grid-cols-3 gap-3">
+        <Stat n={places.length} label="Processes" />
+        <Stat n={orgs.size} label="Companies and Agencies" />
+        <Stat n={places.filter(({ pt }) => pt.decisionMaker).length} label="Decision maker in" />
+      </div>
+
+      <section>
+        <h3 className={`mb-3 ${T.section}`}>Processes</h3>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
           {places.map(({ p, pt }) => (
-            <tr key={p.id} className="border-t">
-              <td className="py-1">
-                <button className="underline" onClick={() => nav({ process: p.id, person: undefined, role: p.roleId })}>
-                  {processTitle(db, p)}
-                </button>
-              </td>
-              <td>{pt.side === 'Agency' ? `Agency (${agencyName(db, p)})` : pt.side === 'none' ? 'no one' : `${pt.side} (${companyName(db, p)})`}</td>
-              <td>
-                {pt.parts.join(', ')}
-              </td>
-              <td>{pt.decisionMaker ? <DecisionMaker /> : <span className="text-slate-400">no</span>}</td>
-              <td>
-                <StatePill p={p} />
-              </td>
-            </tr>
+            <ProcessCard key={p.id} p={p} showRole>
+              <div className="mt-3 flex flex-wrap items-center gap-1 border-t pt-3">
+                <span className="text-xs text-slate-500">{pt.side === 'none' ? 'For no one' : `For the ${pt.side}`}</span>
+                {pt.parts.map((x) => (
+                  <span key={x} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                    {x}
+                  </span>
+                ))}
+                {pt.decisionMaker && <DecisionMaker />}
+              </div>
+            </ProcessCard>
           ))}
-        </tbody>
-      </table>
-      <button className="rounded border px-2 text-xs" onClick={() => setMerging(true)}>
-        Merge with another Person…
-      </button>
-      {merging && <MergePersons a={id} onDone={() => setMerging(false)} />}
+        </div>
+      </section>
     </div>
   )
 }
@@ -89,44 +103,47 @@ export function MergePersons({ a, initialB, onDone }: { a: string; initialB?: st
   const folded = survivor === a ? b : a
   const moving = db.processes.filter((p) => p.participants.some((pt) => pt.personId === folded))
   return (
-    <div className="rounded border-2 border-slate-400 bg-slate-50 p-3 text-xs">
-      <div className="font-semibold">Merge two Persons</div>
-      <div className="mt-1">
-        {personName(db, a)} +{' '}
-        <select className="rounded border" value={b} onChange={(e) => setB(e.target.value)}>
-          {others.map((x) => (
-            <option key={x.id} value={x.id}>
-              {personName(db, x.id)}
-            </option>
-          ))}
-        </select>
+    <Card className="space-y-4 shadow-sm">
+      <div className="flex items-center">
+        <span className={T.section}>Merge two people</span>
+        <button className="ml-auto text-slate-400 hover:text-slate-700" aria-label="Close" onClick={onDone}>
+          ×
+        </button>
       </div>
-      <div className="mt-1">
-        Keep:{' '}
+      {!initialB && (
+        <div className="flex flex-wrap gap-2">
+          {others.map((x) => (
+            <button key={x.id} className={`rounded-full border px-3 py-1 text-sm ${b === x.id ? 'border-indigo-400 bg-indigo-50' : 'hover:bg-slate-50'}`} onClick={() => setB(x.id)}>
+              {personName(db, x.id)}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-3">
         {[a, b].map((x) => (
-          <label key={x} className="mr-2">
-            <input type="radio" checked={survivor === x} onChange={() => setSurvivor(x)} /> {personName(db, x)}
-          </label>
+          <button key={x} className={`flex items-center gap-3 rounded-xl border p-3 text-left ${survivor === x ? 'border-indigo-400 bg-indigo-50' : 'opacity-60 hover:opacity-100'}`} onClick={() => setSurvivor(x)}>
+            <Avatar name={personName(db, x)} placeholder={!db.persons.find((y) => y.id === x)?.name} />
+            <span className="flex-1">
+              <span className="block font-medium">{personName(db, x)}</span>
+              <span className="text-xs text-slate-500">{survivor === x ? 'Keep' : 'Fold in'}</span>
+            </span>
+          </button>
         ))}
       </div>
-      <div className="mt-1 text-slate-600">
-        {personName(db, folded)} goes away; its Profile links and its Participants in {moving.length} Process(es) ({moving.map((p) => companyName(db, p)).join(', ') || '—'}) move to{' '}
-        {personName(db, survivor)}. Two Participants in the same Process combine their Parts.
+      <div className="text-xs text-slate-500">
+        {moving.length} Process{moving.length !== 1 && 'es'} move{moving.length === 1 && 's'} over{moving.length > 0 && `: ${moving.map((p) => companyName(db, p)).join(', ')}`}
       </div>
       <button
-        className="mt-2 rounded bg-slate-800 px-3 py-1 text-white"
+        className="rounded-full bg-indigo-600 px-4 py-1.5 text-sm text-white"
         onClick={() => {
           write('merge Persons', (d) => mergePersons(d, survivor, folded!))
           nav({ person: survivor })
           onDone()
         }}
       >
-        Merge
+        Merge into {personName(db, survivor)}
       </button>
-      <button className="ml-1 rounded border px-3 py-1" onClick={onDone}>
-        Cancel
-      </button>
-    </div>
+    </Card>
   )
 }
 
@@ -216,30 +233,44 @@ export function SearchResults({ onPick }: { onPick?: () => void }) {
   const { db, search, nav } = useStore()
   const q = search.q ?? ''
   const hits = searchDb(db, q)
+  const kinds = [...new Set(hits.map((h) => h.kind))]
   return (
-    <div className="divide-y text-sm">
-      <div className="pb-1 text-xs text-slate-500">
-        {hits.length} hit{hits.length !== 1 && 's'} for “{q}”
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div>
+        <h2 className={T.page}>Search</h2>
+        <div className="text-xs text-slate-500">{q ? `${hits.length} result${hits.length !== 1 ? 's' : ''} for “${q}”` : 'Type in the search box'}</div>
       </div>
-      {hits.map((h, i) => {
-        const p = db.processes.find((x) => x.id === h.processId)
-        return (
-          <button
-            key={i}
-            className="block w-full py-1.5 text-left hover:bg-slate-50"
-            onClick={() => {
-              if (h.personId) nav({ person: h.personId, q: undefined })
-              else if (h.roleId) nav({ role: h.roleId, q: undefined })
-              else nav({ process: h.processId, role: p?.roleId, step: h.stepId, person: undefined, q: undefined })
-              onPick?.()
-            }}
-          >
-            <span className="mr-2 rounded bg-slate-100 px-1.5 text-xs">{h.kind}</span>
-            <span className="text-xs">{snippet(h.text, q)}</span>
-            {p && <div className="text-xs text-slate-500">in {processTitle(db, p)}</div>}
-          </button>
-        )
-      })}
+      {kinds.map((k) => (
+        <section key={k}>
+          <h3 className={`mb-2 ${T.eyebrow}`}>{k}</h3>
+          <div className="grid gap-2">
+            {hits
+              .filter((h) => h.kind === k)
+              .map((h, i) => {
+                const p = db.processes.find((x) => x.id === h.processId)
+                return (
+                  <button
+                    key={i}
+                    className="rounded-xl border bg-white p-3 text-left transition hover:border-indigo-300 hover:shadow-sm"
+                    onClick={() => {
+                      if (h.personId) nav({ person: h.personId, q: undefined, tab: undefined })
+                      else if (h.roleId) nav({ role: h.roleId, q: undefined, tab: 'role' })
+                      else nav({ process: h.processId, role: p?.roleId, step: h.stepId, person: undefined, q: undefined, tab: undefined })
+                      onPick?.()
+                    }}
+                  >
+                    <div className="text-sm text-slate-800">{snippet(h.text, q)}</div>
+                    {p && (
+                      <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                        {processTitle(db, p)} <StatePill p={p} />
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+          </div>
+        </section>
+      ))}
     </div>
   )
 }
@@ -290,72 +321,96 @@ type ListKey = 'stepKinds' | 'channels' | 'docKinds' | 'parts'
 export function ListsPanel() {
   const { db, write } = useStore()
   const [key, setKey] = useState<ListKey>('stepKinds')
+  const [renaming, setRenaming] = useState<string>()
+  const [merging, setMerging] = useState<string>()
   const labels: Record<ListKey, string> = { stepKinds: 'Step kinds', channels: 'Channels', docKinds: 'Document kinds', parts: 'Parts' }
+  const steps = db.processes.flatMap((p) => p.steps)
+  const uses = (item: string) =>
+    key === 'stepKinds'
+      ? steps.filter((s) => s.kind === item).length
+      : key === 'channels'
+        ? steps.filter((s) => s.channel === item).length
+        : key === 'docKinds'
+          ? db.docs.filter((d) => d.kind === item).length
+          : db.processes.flatMap((p) => p.participants).filter((pt) => pt.parts.includes(item)).length
+  const mergeInto = (item: string, into: string) =>
+    write('merge list item', (d) => {
+      d[key] = d[key].filter((x) => x !== item)
+      d.processes.forEach((p) => {
+        p.steps.forEach((s) => {
+          if (key === 'stepKinds' && s.kind === item) s.kind = into
+          if (key === 'channels' && s.channel === item) s.channel = into
+        })
+        if (key === 'parts') p.participants.forEach((pt) => (pt.parts = [...new Set(pt.parts.map((x) => (x === item ? into : x)))]))
+      })
+      if (key === 'docKinds') d.docs.forEach((doc) => doc.kind === item && (doc.kind = into))
+    })
   return (
-    <div className="space-y-2 p-4 text-sm">
-      <div className="flex gap-1">
-        {(Object.keys(labels) as ListKey[]).map((k) => (
-          <button key={k} className={`rounded px-2 text-xs ${k === key ? 'bg-slate-800 text-white' : 'border'}`} onClick={() => setKey(k)}>
-            {labels[k]}
-          </button>
-        ))}
+    <div className="mx-auto max-w-5xl space-y-6 p-6">
+      <div className="flex flex-wrap items-center gap-4">
+        <h2 className={T.page}>Lists</h2>
+        <Segmented value={key} options={Object.entries(labels) as [ListKey, string][]} onChange={(k) => (setKey(k), setMerging(undefined))} />
       </div>
-      {db[key].map((item) => (
-        <div key={item} className="flex items-center gap-2 border-t py-1 text-xs">
-          <span className="flex-1">{item}</span>
-          <button
-            onClick={() => {
-              const n = prompt('Rename', item)
-              if (n) write('rename', (d) => (d[key] = d[key].map((x) => (x === item ? n : x))))
-            }}
-          >
-            rename
-          </button>
-          <select
-            className="rounded border"
-            value=""
-            onChange={(e) => {
-              const into = e.target.value
-              write('merge list item', (d) => {
-                d[key] = d[key].filter((x) => x !== item)
-                // Real app moves every reference; the prototype just renames them.
-                d.processes.forEach((p) =>
-                  p.steps.forEach((s) => {
-                    if (key === 'stepKinds' && s.kind === item) s.kind = into
-                    if (key === 'channels' && s.channel === item) s.channel = into
-                  }),
-                )
-              })
-            }}
-          >
-            <option value="">merge into…</option>
+      {merging && (
+        <Card>
+          <div className="mb-2 flex items-center">
+            <span className={T.label}>Merge “{merging}” into</span>
+            <button className="ml-auto text-slate-400 hover:text-slate-700" aria-label="Close" onClick={() => setMerging(undefined)}>
+              ×
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
             {db[key]
-              .filter((x) => x !== item)
+              .filter((x) => x !== merging)
               .map((x) => (
-                <option key={x}>{x}</option>
+                <button key={x} className="rounded-full border px-3 py-1 text-sm hover:border-indigo-300 hover:bg-indigo-50" onClick={() => (mergeInto(merging, x), setMerging(undefined))}>
+                  {x}
+                </button>
               ))}
-          </select>
+          </div>
+        </Card>
+      )}
+      <div className="divide-y rounded-xl border bg-white">
+        {db[key].map((item) => (
+          <div key={item} className="group flex items-center gap-3 px-4 py-2">
+            {renaming === item ? (
+              <input
+                autoFocus
+                defaultValue={item}
+                className="flex-1 rounded border border-indigo-300 px-2 py-0.5"
+                onBlur={(e) => {
+                  const n = e.target.value.trim()
+                  if (n && n !== item) write('rename', (d) => (d[key] = d[key].map((x) => (x === item ? n : x))))
+                  setRenaming(undefined)
+                }}
+                onKeyDown={(e) => (e.key === 'Enter' ? e.currentTarget.blur() : e.key === 'Escape' && setRenaming(undefined))}
+              />
+            ) : (
+              <span className="flex flex-1 items-center gap-2 font-medium text-slate-800">
+                {item}
+                <button className="text-slate-300 opacity-0 group-hover:opacity-100 hover:text-slate-600" aria-label="Rename" title="Rename" onClick={() => setRenaming(item)}>
+                  <Icon d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" size={14} />
+                </button>
+              </span>
+            )}
+            <span className="text-xs text-slate-400">{uses(item)} in use</span>
+            <Menu items={[['Merge into…', () => setMerging(item)]]} />
+          </div>
+        ))}
+        <div className="px-4 py-2.5">
+          <AddChip label="Add" placeholder="Name" options={[]} onPick={() => {}} onNew={(n) => write('add list item', (d) => d[key].push(n))} />
         </div>
-      ))}
-      <button
-        className="rounded border px-2 text-xs"
-        onClick={() => {
-          const n = prompt(`New ${labels[key]} entry`)
-          if (n) write('add list item', (d) => d[key].push(n))
-        }}
-      >
-        + add
-      </button>
+      </div>
     </div>
   )
 }
 
-/** One row per Person × organisation they spoke for (a recruiter seen at two Companies gets two rows). */
+/** People grouped by the Company or Agency they spoke for; a Person seen at two organisations appears in both groups. */
 export function PeopleList() {
   const { db, nav, search, write } = useStore()
   const [picked, setPicked] = useState<string[]>([])
   const [org, setOrg] = useState('')
-  const dupOf = (id: string) => likelyDuplicates(db, id)
+  const [mergePair, setMergePair] = useState<[string, string]>()
   type Row = { personId: string; org: string; side: string; parts: Set<string>; dm: boolean; processes: number }
   const rows: Row[] = []
   for (const x of db.persons) {
@@ -371,86 +426,97 @@ export function PeopleList() {
       }
     rows.push(...(mine.size ? mine.values() : [{ personId: x.id, org: '', side: 'none', parts: new Set<string>(), dm: false, processes: 0 }]))
   }
-  const orgs = [...new Set(rows.map((r) => r.org).filter(Boolean))].sort()
-  const shown = rows
-    .filter((r) => !org || r.org === org)
-    .sort((a, b) => (a.org || '￿').localeCompare(b.org || '￿') || personName(db, a.personId).localeCompare(personName(db, b.personId)))
+  const orgs = [...new Set(rows.map((r) => r.org))].sort((a, b) => (a || '\uffff').localeCompare(b || '\uffff'))
+  const pairs = db.persons.flatMap((x) => likelyDuplicates(db, x.id).filter((o) => o.id > x.id).map((o) => [x.id, o.id] as [string, string]))
   return (
-    <div className="space-y-3 p-4 text-sm">
-      <div className="flex items-center gap-3">
+    <div className="mx-auto max-w-5xl space-y-6 p-6">
+      <div className="flex flex-wrap items-center gap-3">
         <h2 className={T.page}>People</h2>
-        <select className="rounded border text-xs" value={org} onChange={(e) => setOrg(e.target.value)}>
-          <option value="">All Companies & Agencies</option>
-          {orgs.map((o) => (
-            <option key={o}>{o}</option>
+        <span className="text-xs text-slate-500">{db.persons.length}</span>
+        <div className="ml-auto flex flex-wrap gap-1">
+          {['', ...orgs.filter(Boolean)].map((o) => (
+            <button key={o || 'all'} className={`rounded-full px-3 py-1 text-xs ${org === o ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`} onClick={() => setOrg(o)}>
+              {o || 'All'}
+            </button>
           ))}
-        </select>
-        <span className="text-xs text-slate-500">Tick two to Merge them.</span>
+        </div>
       </div>
-      <table className={T.table}>
-        <thead className={T.thead}>
-          <tr>
-            <th className="w-6" />
-            <th>Person</th>
-            <th>Company / Agency</th>
-            <th>Parts</th>
-            <th>Decision maker</th>
-            <th>Processes</th>
-            <th>Profile links</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {shown.map((r) => {
-            const x = db.persons.find((y) => y.id === r.personId)!
-            const dups = dupOf(x.id)
-            return (
-              <tr key={x.id + r.org} className={`border-t ${search.person === x.id ? 'bg-indigo-100' : dups.length ? 'bg-amber-50' : ''}`}>
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={picked.includes(x.id)}
-                    disabled={!picked.includes(x.id) && picked.length >= 2}
-                    onChange={(e) => setPicked((ps) => (e.target.checked ? [...ps, x.id] : ps.filter((i) => i !== x.id)))}
-                  />
-                </td>
-                <td className="py-1">
-                  <button className="underline" onClick={() => nav({ person: x.id, tab: undefined })}>
-                    {personName(db, x.id)}
-                  </button>
-                  {!x.name && <span className="ml-1 rounded bg-slate-200 px-1 text-xs">placeholder</span>}
-                </td>
-                <td>
-                  {r.org || <span className="text-slate-400">— no one</span>}
-                  {r.side !== 'Company' && r.org && <span className="ml-1 text-xs text-slate-400">{r.side}</span>}
-                </td>
-                <td>
-                  {[...r.parts].join(', ') || '—'}
-                </td>
-                <td>{r.dm ? <DecisionMaker /> : <span className="text-slate-400">no</span>}</td>
-                <td>{r.processes}</td>
-                <td>
-                  <ProfileLinks links={x.links} />
-                </td>
-                <td className="text-amber-700">
-                  {dups.length > 0 && (
-                    <>
-                      possible duplicate of {dups.map((d) => personName(db, d.id)).join(', ')}
-                      <button
-                        className="ml-1 rounded border border-amber-600 px-1 text-xs"
-                        onClick={() => write('mark not duplicates', (d) => dups.forEach((o) => d.notDuplicates.push([x.id, o.id])))}
-                      >
-                        not the same
-                      </button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+
+      {pairs.map(([a, b]) => (
+        <div key={a + b} className="flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+          <b>{personName(db, a)}</b> and <b>{personName(db, b)}</b> share a Profile link. Same person?
+          <span className="ml-auto flex gap-2">
+            <button className="rounded-full bg-amber-600 px-3 py-1 text-xs text-white" onClick={() => setMergePair([a, b])}>
+              Merge
+            </button>
+            <button className="rounded-full border border-amber-400 px-3 py-1 text-xs" onClick={() => write('mark not duplicates', (d) => d.notDuplicates.push([a, b]))}>
+              Not the same
+            </button>
+          </span>
+        </div>
+      ))}
+      {mergePair && <MergePersons a={mergePair[0]} initialB={mergePair[1]} onDone={() => setMergePair(undefined)} />}
       {picked.length === 2 && <MergePersons a={picked[0]} initialB={picked[1]} onDone={() => setPicked([])} />}
+
+      {orgs
+        .filter((o) => !org || o === org)
+        .map((o) => {
+          const group = rows.filter((r) => r.org === o).sort((a, b) => personName(db, a.personId).localeCompare(personName(db, b.personId)))
+          return (
+            <section key={o || 'none'}>
+              <h3 className={`mb-2 ${T.eyebrow}`}>{o || 'Spoke for no one'}</h3>
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
+                {group.map((r) => {
+                  const x = db.persons.find((y) => y.id === r.personId)!
+                  const on = picked.includes(x.id)
+                  return (
+                    <div
+                      key={x.id}
+                      role="button"
+                      tabIndex={0}
+                      className={`group relative cursor-pointer rounded-xl border bg-white p-4 transition hover:border-indigo-300 hover:shadow-sm ${search.person === x.id ? 'border-indigo-400 ring-2 ring-indigo-100' : ''}`}
+                      onClick={() => nav({ person: x.id, tab: undefined })}
+                    >
+                      <input
+                        type="checkbox"
+                        title="Select to merge"
+                        className={`absolute right-3 top-3 ${on ? '' : 'opacity-0 group-hover:opacity-100'}`}
+                        checked={on}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setPicked((ps) => (e.target.checked ? [...ps, x.id].slice(-2) : ps.filter((i) => i !== x.id)))}
+                      />
+                      <div className="flex items-center gap-3 pr-5">
+                        <Avatar name={personName(db, x.id)} placeholder={!x.name} />
+                        <div className="min-w-0">
+                          <div className="truncate font-semibold text-slate-900" title={personName(db, x.id)}>
+                            {personName(db, x.id)}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {r.side !== 'Company' && r.org ? `${r.side} · ` : ''}
+                            {r.processes} Process{r.processes !== 1 && 'es'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-1">
+                        {[...r.parts].map((t) => (
+                          <span key={t} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                            {t}
+                          </span>
+                        ))}
+                        {r.dm && <DecisionMaker />}
+                      </div>
+                      {x.links.length > 0 && (
+                        <div className="mt-3 truncate text-xs" onClick={(e) => e.stopPropagation()}>
+                          <ProfileLinks links={x.links} />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )
+        })}
     </div>
   )
 }
