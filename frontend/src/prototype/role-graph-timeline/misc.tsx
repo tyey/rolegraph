@@ -1,7 +1,7 @@
 // PROTOTYPE (tyey/rolegraph#13): Person view + Merge, search, editable lists.
 import { useState } from 'react'
 import type { Db } from './data'
-import { agencyName, companyName, fmtDay, isOpen, personName, processTitle, roleName, useStore } from './store'
+import { agencyName, companyName, fmtDay, isOpen, likelyDuplicates, personName, processTitle, roleName, useStore } from './store'
 
 export function PersonView({ id }: { id: string }) {
   const { db, write, nav } = useStore()
@@ -9,7 +9,7 @@ export function PersonView({ id }: { id: string }) {
   const person = db.persons.find((x) => x.id === id)
   if (!person) return <div className="p-4 text-slate-500">That Person was Merged away.</div>
   const places = db.processes.flatMap((p) => p.participants.filter((pt) => pt.personId === id).map((pt) => ({ p, pt })))
-  const sameLink = db.persons.filter((x) => x.id !== id && x.links.some((l) => person.links.includes(l)))
+  const sameLink = likelyDuplicates(db, id)
   return (
     <div className="space-y-3 p-4 text-sm">
       <div className="text-xs uppercase tracking-wide text-slate-500">Person</div>
@@ -33,6 +33,12 @@ export function PersonView({ id }: { id: string }) {
           Shares a Profile link with <b>{sameLink.map((x) => personName(db, x.id)).join(', ')}</b>. Same human?{' '}
           <button className="rounded bg-amber-600 px-1.5 text-white" onClick={() => setMerging(true)}>
             Merge…
+          </button>
+          <button
+            className="ml-1 rounded border border-amber-600 px-1.5 text-amber-800"
+            onClick={() => write('mark not duplicates', (d) => sameLink.forEach((o) => d.notDuplicates.push([id, o.id])))}
+          >
+            Not the same person
           </button>
         </div>
       )}
@@ -127,6 +133,7 @@ function mergePersons(d: Db, keep: string, fold: string) {
   k.links = [...new Set([...k.links, ...f.links])]
   k.name ??= f.name
   d.persons = d.persons.filter((x) => x !== f)
+  d.notDuplicates = d.notDuplicates.map(([a, b]) => [a === fold ? keep : a, b === fold ? keep : b] as [string, string]).filter(([a, b]) => a !== b)
   for (const p of d.processes) {
     const fp = p.participants.find((x) => x.personId === fold)
     if (fp) {
@@ -325,13 +332,10 @@ export function ListsPanel() {
 
 /** One row per Person × organisation they spoke for (a recruiter seen at two Companies gets two rows). */
 export function PeopleList() {
-  const { db, nav, search } = useStore()
+  const { db, nav, search, write } = useStore()
   const [picked, setPicked] = useState<string[]>([])
   const [org, setOrg] = useState('')
-  const dupOf = (id: string) => {
-    const me = db.persons.find((x) => x.id === id)!
-    return db.persons.filter((x) => x.id !== id && x.links.some((l) => me.links.includes(l)))
-  }
+  const dupOf = (id: string) => likelyDuplicates(db, id)
   type Row = { personId: string; org: string; side: string; parts: Set<string>; dm: boolean; processes: number }
   const rows: Row[] = []
   for (const x of db.persons) {
@@ -408,7 +412,19 @@ export function PeopleList() {
                 <td>
                   <ProfileLinks links={x.links} />
                 </td>
-                <td className="text-amber-700">{dups.length > 0 && `possible duplicate of ${dups.map((d) => personName(db, d.id)).join(', ')}`}</td>
+                <td className="text-amber-700">
+                  {dups.length > 0 && (
+                    <>
+                      possible duplicate of {dups.map((d) => personName(db, d.id)).join(', ')}
+                      <button
+                        className="ml-1 rounded border border-amber-600 px-1 text-[10px]"
+                        onClick={() => write('mark not duplicates', (d) => dups.forEach((o) => d.notDuplicates.push([x.id, o.id])))}
+                      >
+                        not the same
+                      </button>
+                    </>
+                  )}
+                </td>
               </tr>
             )
           })}

@@ -89,6 +89,13 @@ export const personName = (db: Db, id?: string) => {
   return p ? (p.name ?? `“${p.description}”`) : '?'
 }
 export const processTitle = (db: Db, p: Process) => `${companyName(db, p)} · ${roleName(db, p.roleId)}`
+/** Persons sharing a Profile link with this one, minus pairs the user marked as different humans. */
+export const likelyDuplicates = (db: Db, id: string) => {
+  const me = db.persons.find((x) => x.id === id)
+  if (!me) return []
+  const dismissed = (o: string) => db.notDuplicates.some(([a, b]) => (a === id && b === o) || (a === o && b === id))
+  return db.persons.filter((x) => x.id !== id && x.links.some((l) => me.links.includes(l)) && !dismissed(x.id))
+}
 export const isOpen = (p: Process) => !p.outcome
 
 /** Origin first, then dated Steps by day+time, then undated Planned Steps in the user's order. */

@@ -53,6 +53,7 @@ export type Db = {
   channels: string[]
   docKinds: string[]
   parts: string[]
+  notDuplicates: [string, string][] // Person pairs the user said are different humans
 }
 
 const step = (s: Partial<Step> & Pick<Step, 'id' | 'kind' | 'state'>): Step => ({
@@ -181,4 +182,5 @@ export const seed: Db = {
   channels: ['LinkedIn', 'Job board', 'Company careers site', 'Email', 'Referral'],
   docKinds: ['CV', 'Cover letter', 'Job description', 'Take-home brief', 'Take-home submission', 'Offer letter', 'Notes', 'Other'],
   parts: ['Recruiter', 'Sourcer', 'Coordinator', 'Interviewer', 'Hiring manager', 'Team member', 'Referrer', 'Executive'],
+  notDuplicates: [],
 }
