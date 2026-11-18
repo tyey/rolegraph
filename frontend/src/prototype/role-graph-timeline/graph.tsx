@@ -10,7 +10,7 @@ type ProcData = { label: string; state: string; open: boolean; selected: boolean
 
 function RoleNode({ data }: NodeProps<Node<RoleData>>) {
   return (
-    <div className={`rounded-lg border-2 bg-white px-3 py-2 text-sm shadow-sm ${data.selected ? 'border-indigo-600' : 'border-slate-300'}`}>
+    <div className={`w-full rounded-lg border-2 bg-white px-3 py-2 text-sm shadow-sm ${data.selected ? 'border-indigo-600' : 'border-slate-300'}`}>
       <Handle type="target" position={Position.Top} title="Parent Roles connect here" />
       <div className="font-semibold">{data.label}</div>
       <div className="text-xs text-slate-500">
@@ -22,7 +22,7 @@ function RoleNode({ data }: NodeProps<Node<RoleData>>) {
 }
 function ProcNode({ data }: NodeProps<Node<ProcData>>) {
   return (
-    <div className={`rounded-full border px-3 py-1 text-xs ${data.selected ? 'ring-2 ring-indigo-500' : ''} ${data.open ? 'border-emerald-400 bg-emerald-50' : 'border-slate-300 bg-slate-100 text-slate-500'}`}>
+    <div className={`w-full truncate whitespace-nowrap rounded-full border px-3 py-1 text-center text-xs ${data.selected ? 'ring-2 ring-indigo-500' : ''} ${data.open ? 'border-emerald-400 bg-emerald-50' : 'border-slate-300 bg-slate-100 text-slate-500'}`}>
       <Handle type="target" position={Position.Top} isConnectable={false} />
       {data.label} <span className="opacity-70">· {data.state}</span>
     </div>
@@ -75,8 +75,11 @@ export function RoleGraph({ showProcesses = true, onOpenProcess }: { showProcess
   const g = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}))
   g.setGraph({ rankdir: 'TB', nodesep: 30, ranksep: 60 })
   const procs = showProcesses ? db.processes.filter((p) => closedToo || isOpen(p)) : []
-  db.roles.forEach((r) => g.setNode(r.id, { width: 180, height: 50 }))
-  procs.forEach((p) => g.setNode(p.id, { width: 170, height: 26 }))
+  // Sizes come from the text, and the same widths are put on the nodes, so dagre's spacing matches what renders.
+  const roleW = (name: string) => Math.min(280, Math.max(160, name.length * 8 + 40))
+  const procW = (p: (typeof procs)[number]) => Math.min(300, Math.max(140, (companyName(db, p) + ' · ' + (p.outcome ?? p.status)).length * 6.5 + 36))
+  db.roles.forEach((r) => g.setNode(r.id, { width: roleW(r.name), height: 56 }))
+  procs.forEach((p) => g.setNode(p.id, { width: procW(p), height: 28 }))
   db.edges.forEach((e) => g.setEdge(e.parent, e.child))
   procs.forEach((p) => g.setEdge(p.roleId, p.id))
   dagre.layout(g)
@@ -88,12 +91,13 @@ export function RoleGraph({ showProcesses = true, onOpenProcess }: { showProcess
   const nodes: Node[] = [
     ...db.roles.map((r) => {
       const ps = db.processes.filter((p) => p.roleId === r.id)
-      return { id: r.id, type: 'role', position: pos(r.id), data: { label: r.name, count: ps.length, open: ps.filter(isOpen).length, selected: search.role === r.id } }
+      return { id: r.id, type: 'role', position: pos(r.id), style: { width: roleW(r.name) }, data: { label: r.name, count: ps.length, open: ps.filter(isOpen).length, selected: search.role === r.id } }
     }),
     ...procs.map((p) => ({
       id: p.id,
       type: 'proc',
       position: pos(p.id),
+      style: { width: procW(p) },
       connectable: false,
       data: { label: companyName(db, p), state: p.outcome ?? p.status, open: isOpen(p), selected: search.process === p.id },
     })),
@@ -134,6 +138,7 @@ export function RoleGraph({ showProcesses = true, onOpenProcess }: { showProcess
   return (
     <div className="relative h-full w-full">
       <ReactFlow
+        key={nodes.map((n) => n.id).join() + edges.map((e) => e.id).join()} // re-fit the view whenever the shape changes
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
