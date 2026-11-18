@@ -274,7 +274,7 @@ function Timeline({ p, openStep }: { p: Process; openStep?: string }) {
               className={`relative rounded border bg-white p-2 ${s.state === 'Cancelled' ? 'opacity-50' : ''} ${openStep === s.id ? 'ring-2 ring-indigo-400' : 'cursor-pointer hover:border-indigo-300'}`}
               onClick={() => openStep !== s.id && nav({ step: s.id }, true)}
             >
-              <div className={`flex flex-wrap items-baseline gap-2 text-sm ${openStep === s.id ? 'pr-32' : ''}`}>
+              <div className={`flex flex-wrap items-baseline gap-2 text-sm ${openStep === s.id ? 'pr-40' : ''}`}>
                 <button className={`font-semibold ${s.state === 'Cancelled' ? 'line-through' : ''}`} >
                   {s.kind}
                 </button>
@@ -385,20 +385,25 @@ function StepDetail({ p, s }: { p: Process; s: Step }) {
 
   return (
     <div ref={ref} className="mt-2 space-y-3 border-t pt-2 text-sm">
-      <div className="absolute right-2 top-2 flex gap-1">
-        <button className="rounded bg-emerald-600 px-2 text-white" title="Save changes" onClick={approve}>
-          ✓
-        </button>
+      <div className="absolute right-2 top-2 flex items-center gap-1">
         <button className="rounded border px-2" title="Discard changes" onClick={reject}>
           ✕
         </button>
+        <button className="rounded bg-emerald-600 px-2 text-white" title="Save changes" onClick={approve}>
+          ✓
+        </button>
+        <span className="mx-3 h-5 w-px bg-slate-300" />
         <button
-          className="rounded border border-red-300 px-2 text-red-700 disabled:opacity-30"
+          className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-30"
           disabled={s.origin}
           title={s.origin ? 'The Origin can’t be deleted: every Process has exactly one' : 'Delete this Step'}
+          aria-label="Delete this Step"
           onClick={() => setDeleting(true)}
         >
-          🗑
+          {/* Final version: lucide-react Trash2 (shadcn's icon set). */}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+          </svg>
         </button>
       </div>
       {deleting && (
