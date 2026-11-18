@@ -121,7 +121,7 @@ export function VariantC() {
   const tab = search.q ? 'search' : (search.tab ?? (search.person ? 'people' : 'process'))
   return (
     <div className="flex h-screen">
-      <nav className="w-72 space-y-1 overflow-y-auto border-r bg-slate-50 p-2">
+      <nav className="w-96 shrink-0 space-y-1 overflow-y-auto border-r bg-slate-50 p-2">
         <div className="px-1 pb-2 font-bold">rolegraph</div>
         <SearchBox className="mb-2 w-full" />
         {roots.map((r) => (

@@ -165,17 +165,28 @@ export function ProcessPanel({ id, wide = false }: { id: string; wide?: boolean 
 
       {closing && <CloseDialog p={p} onDone={() => setClosing(false)} />}
 
-      <div className={wide ? 'grid grid-cols-[1fr_320px] gap-6' : 'space-y-4'}>
-        <section>
-          <h3 className="mb-2 font-semibold">Timeline</h3>
-          <Timeline p={p} openStep={search.step} />
-          <AddStep p={p} />
-        </section>
-        <aside className="space-y-4">
+      {wide ? (
+        // Layout C: full-width stack, prep notes → Participants → Timeline.
+        <div className="space-y-6">
+          <Notes big label="Process prep notes" value={p.prep} onSave={(v) => w('edit Process prep notes', (d) => (P(d, p.id).prep = v))} />
+          <Participants p={p} />
+          <section>
+            <h3 className="mb-2 font-semibold">Timeline</h3>
+            <Timeline p={p} openStep={search.step} />
+            <AddStep p={p} />
+          </section>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <section>
+            <h3 className="mb-2 font-semibold">Timeline</h3>
+            <Timeline p={p} openStep={search.step} />
+            <AddStep p={p} />
+          </section>
           <Notes label="Process prep notes" value={p.prep} onSave={(v) => w('edit Process prep notes', (d) => (P(d, p.id).prep = v))} />
           <Participants p={p} />
-        </aside>
-      </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -556,18 +567,18 @@ function AddStep({ p }: { p: Process }) {
   )
 }
 
-export function Notes({ label, value, onSave }: { label: string; value: string; onSave: (v: string) => void }) {
+export function Notes({ label, value, onSave, big = false }: { label: string; value: string; onSave: (v: string) => void; big?: boolean }) {
   const [draft, setDraft] = useState<string>()
   return (
     <div className="text-sm">
       <div className="text-xs font-semibold">{label}</div>
       {draft === undefined ? (
-        <button className="mt-1 w-full whitespace-pre-wrap rounded bg-yellow-50 p-2 text-left text-xs" onClick={() => setDraft(value)}>
+        <button className={`mt-1 w-full whitespace-pre-wrap rounded bg-yellow-50 p-2 text-left ${big ? 'min-h-24 text-sm' : 'text-xs'}`} onClick={() => setDraft(value)}>
           {value || <span className="text-slate-400">click to write…</span>}
         </button>
       ) : (
         <div>
-          <textarea className="mt-1 w-full rounded border p-1 text-xs" rows={3} autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} />
+          <textarea className={`mt-1 w-full rounded border p-1 ${big ? 'text-sm' : 'text-xs'}`} rows={big ? 8 : 3} autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} />
           <button
             className="rounded bg-slate-800 px-2 text-xs text-white"
             onClick={() => {
