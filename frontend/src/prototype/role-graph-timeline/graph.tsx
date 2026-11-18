@@ -1,9 +1,9 @@
 // PROTOTYPE (tyey/rolegraph#13): Role DAG on React Flow + dagre.
 import dagre from '@dagrejs/dagre'
-import { Background, Controls, Handle, MarkerType, Position, ReactFlow, type Connection, type Edge, type Node, type NodeProps } from '@xyflow/react'
+import { BaseEdge, Background, Controls, EdgeLabelRenderer, getBezierPath, Handle, MarkerType, Position, ReactFlow, type Connection, type Edge, type EdgeProps, type Node, type NodeProps } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { useState } from 'react'
-import { companyName, isOpen, roleName, uid, useStore, wouldCycle } from './store'
+import { useRef, useState } from 'react'
+import { companyName, isOpen, uid, useStore, wouldCycle } from './store'
 
 type RoleData = { label: string; count: number; open: number; selected: boolean }
 type ProcData = { label: string; state: string; open: boolean; selected: boolean }
@@ -11,12 +11,12 @@ type ProcData = { label: string; state: string; open: boolean; selected: boolean
 function RoleNode({ data }: NodeProps<Node<RoleData>>) {
   return (
     <div className={`rounded-lg border-2 bg-white px-3 py-2 text-sm shadow-sm ${data.selected ? 'border-indigo-600' : 'border-slate-300'}`}>
-      <Handle type="target" position={Position.Top} />
+      <Handle type="target" position={Position.Top} title="Parent Roles connect here" />
       <div className="font-semibold">{data.label}</div>
       <div className="text-xs text-slate-500">
         {data.open} open · {data.count} total
       </div>
-      <Handle type="source" position={Position.Bottom} />
+      <Handle type="source" position={Position.Bottom} title="Drag to a child Role" className="!h-3 !w-3 !bg-indigo-500" />
     </div>
   )
 }
@@ -30,11 +30,47 @@ function ProcNode({ data }: NodeProps<Node<ProcData>>) {
 }
 const nodeTypes = { role: RoleNode, proc: ProcNode }
 
+type RoleEdgeData = { active: boolean; onHover: (on: boolean) => void; onDelete: () => void }
+function RoleEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, markerEnd, style, data }: EdgeProps<Edge<RoleEdgeData>>) {
+  const [path, x, y] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition })
+  return (
+    <>
+      <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} interactionWidth={20} />
+      {data?.active && (
+        <EdgeLabelRenderer>
+          <button
+            className="nodrag nopan pointer-events-auto absolute rounded-full border border-red-300 bg-white p-1 text-red-600 shadow hover:bg-red-50"
+            style={{ transform: `translate(-50%, -50%) translate(${x}px, ${y}px)` }}
+            title="Remove this edge"
+            aria-label="Remove this edge"
+            onMouseEnter={() => data.onHover(true)}
+            onMouseLeave={() => data.onHover(false)}
+            onClick={data.onDelete}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+            </svg>
+          </button>
+        </EdgeLabelRenderer>
+      )}
+    </>
+  )
+}
+const edgeTypes = { role: RoleEdge }
+
 export function RoleGraph({ showProcesses = true, onOpenProcess }: { showProcesses?: boolean; onOpenProcess?: (id: string) => void }) {
   const { db, write, search, nav } = useStore()
   const [closedToo, setClosedToo] = useState(false)
   const [msg, setMsg] = useState('')
-  const [picked, setPicked] = useState<string>() // selected Role edge id 'parent>child'
+  const [picked, setPicked] = useState<string>() // clicked Role edge id 'parent>child'
+  const [hovered, setHoveredNow] = useState<string>()
+  const leaveTimer = useRef<number>(undefined)
+  // Leaving the edge waits a moment, so the pointer can reach the trash icon.
+  const setHovered = (id?: string) => {
+    clearTimeout(leaveTimer.current)
+    if (id) setHoveredNow(id)
+    else leaveTimer.current = window.setTimeout(() => setHoveredNow(undefined), 250)
+  }
 
   const g = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}))
   g.setGraph({ rankdir: 'TB', nodesep: 30, ranksep: 60 })
@@ -65,8 +101,24 @@ export function RoleGraph({ showProcesses = true, onOpenProcess }: { showProcess
   const edges: Edge[] = [
     ...db.edges.map((e) => {
       const id = `${e.parent}>${e.child}`
-      const on = picked === id
-      return { id, source: e.parent, target: e.child, interactionWidth: 20, markerEnd: { type: MarkerType.ArrowClosed, color: on ? '#dc2626' : undefined }, style: on ? { stroke: '#dc2626', strokeWidth: 3 } : undefined }
+      const on = picked === id || hovered === id
+      return {
+        id,
+        type: 'role',
+        source: e.parent,
+        target: e.child,
+        markerEnd: { type: MarkerType.ArrowClosed, color: on ? '#dc2626' : undefined },
+        style: on ? { stroke: '#dc2626', strokeWidth: 3 } : undefined,
+        data: {
+          active: on,
+          onHover: (h: boolean) => setHovered(h ? id : undefined),
+          onDelete: () => {
+            write('remove Role edge', (d) => (d.edges = d.edges.filter((x) => !(x.parent === e.parent && x.child === e.child))))
+            setPicked(undefined)
+            setHovered(undefined)
+          },
+        },
+      }
     }),
     ...procs.map((p) => ({ id: `${p.roleId}>${p.id}`, source: p.roleId, target: p.id, style: { strokeDasharray: '4 3', stroke: '#94a3b8' } })),
   ]
@@ -87,7 +139,10 @@ export function RoleGraph({ showProcesses = true, onOpenProcess }: { showProcess
         nodeTypes={nodeTypes}
         onConnect={onConnect}
         onNodeClick={(_, n) => (n.type === 'proc' ? (onOpenProcess ? onOpenProcess(n.id) : nav({ process: n.id, person: undefined })) : nav({ role: n.id }))}
-        onEdgeClick={(_, e) => setPicked(e.id.startsWith('r-') && db.edges.some((x) => `${x.parent}>${x.child}` === e.id) ? e.id : undefined)}
+        edgeTypes={edgeTypes}
+        onEdgeClick={(_, e) => setPicked(e.type === 'role' ? e.id : undefined)}
+        onEdgeMouseEnter={(_, e) => e.type === 'role' && setHovered(e.id)}
+        onEdgeMouseLeave={() => setHovered(undefined)}
         onPaneClick={() => setPicked(undefined)}
         deleteKeyCode={null}
         nodesDraggable={false}
@@ -111,23 +166,6 @@ export function RoleGraph({ showProcesses = true, onOpenProcess }: { showProcess
           <label className="flex items-center gap-1">
             <input type="checkbox" checked={closedToo} onChange={(e) => setClosedToo(e.target.checked)} /> show Closed Processes
           </label>
-        )}
-        <span className="text-slate-500">Drag bottom handle → top handle to add a parent→child edge. Click an edge to select it.</span>
-        {picked && (
-          <span className="flex items-center gap-1 rounded bg-red-50 px-2 py-0.5">
-            {roleName(db, picked.split('>')[0])} → {roleName(db, picked.split('>')[1])}
-            <button
-              className="rounded bg-red-600 px-2 text-white"
-              onClick={() => {
-                const [parent, child] = picked.split('>')
-                write('remove Role edge', (d) => (d.edges = d.edges.filter((e) => !(e.parent === parent && e.child === child))))
-                setPicked(undefined)
-              }}
-            >
-              Remove edge
-            </button>
-            <button onClick={() => setPicked(undefined)}>✕</button>
-          </span>
         )}
         {msg && <span className="font-semibold text-red-600">{msg}</span>}
       </div>
