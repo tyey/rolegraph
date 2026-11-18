@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+html { color-scheme: light; }
+body { background: white; color: #0f172a; }
+.react-flow { color-scheme: light !important; }
