@@ -51,7 +51,7 @@ A human the candidate deals with during recruitment, such as a recruiter, an int
 _Avoid_: Contact, recruiter (for the general case)
 
 **Profile link**:
-A way to reach or recognise a Person, such as a LinkedIn profile URL or an email address. A Person has any number of them. A new Person whose Profile link already belongs to another Person is offered as a match for that Person, while a similar name is only suggested; the candidate decides, and two Persons found to be one human are Merged. Several Persons can share a Profile link, such as a shared hiring inbox, so a match is only offered, never forced.
+A way to reach or recognise a Person, such as a LinkedIn profile URL or an email address. A Person has any number of them. A new Person whose Profile link already belongs to another Person is offered as a match for that Person, while a similar name is only suggested; the candidate decides, and two Persons found to be one human are Merged. Several Persons can share a Profile link, such as a shared hiring inbox, so a match is only offered, never forced. When the candidate says two Persons are different humans, that pair is never offered or suggested again, and the mark passes to the survivor of any later Merge.
 _Avoid_: Contact details, handle, identifier
 
 **Participant**:
