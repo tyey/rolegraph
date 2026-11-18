@@ -271,10 +271,10 @@ function Timeline({ p, openStep }: { p: Process; openStep?: string }) {
             {!s.day && !s.origin && prevDated && <div className="-ml-5 mb-2 text-xs uppercase tracking-wide text-slate-400">— not scheduled yet —</div>}
             <span className={`absolute -left-[9px] mt-1.5 h-4 w-4 rounded-full border-2 ${stateStyle[s.state]}`} />
             <div
-              className={`rounded border bg-white p-2 ${s.state === 'Cancelled' ? 'opacity-50' : ''} ${openStep === s.id ? 'ring-2 ring-indigo-400' : 'cursor-pointer hover:border-indigo-300'}`}
+              className={`relative rounded border bg-white p-2 ${s.state === 'Cancelled' ? 'opacity-50' : ''} ${openStep === s.id ? 'ring-2 ring-indigo-400' : 'cursor-pointer hover:border-indigo-300'}`}
               onClick={() => openStep !== s.id && nav({ step: s.id }, true)}
             >
-              <div className="flex flex-wrap items-baseline gap-2 text-sm">
+              <div className={`flex flex-wrap items-baseline gap-2 text-sm ${openStep === s.id ? 'pr-32' : ''}`}>
                 <button className={`font-semibold ${s.state === 'Cancelled' ? 'line-through' : ''}`} >
                   {s.kind}
                 </button>
@@ -385,14 +385,45 @@ function StepDetail({ p, s }: { p: Process; s: Step }) {
 
   return (
     <div ref={ref} className="mt-2 space-y-3 border-t pt-2 text-sm">
-      <div className="float-right flex gap-1">
+      <div className="absolute right-2 top-2 flex gap-1">
         <button className="rounded bg-emerald-600 px-2 text-white" title="Save changes" onClick={approve}>
           ✓
         </button>
         <button className="rounded border px-2" title="Discard changes" onClick={reject}>
           ✕
         </button>
+        <button
+          className="rounded border border-red-300 px-2 text-red-700 disabled:opacity-30"
+          disabled={s.origin}
+          title={s.origin ? 'The Origin can’t be deleted: every Process has exactly one' : 'Delete this Step'}
+          onClick={() => setDeleting(true)}
+        >
+          🗑
+        </button>
       </div>
+      {deleting && (
+      <div className="rounded border-2 border-red-400 bg-red-50 p-2 text-xs">
+        <div className="font-semibold">Delete this {s.kind} Step for good?</div>
+        <div className="mt-1">
+          Everything on it will be lost: its day and state, who took part, Step prep notes, the Reflection, {s.feedback.length} Feedback and {s.docs.length} Document attachment
+          {s.docs.length !== 1 && 's'}. The Documents themselves stay in rolegraph. If it just won’t happen, mark it Cancelled instead.
+        </div>
+        <div className="mt-2 flex gap-2">
+          <button
+            className="rounded bg-red-600 px-2 text-white"
+            onClick={() => {
+              write(`delete ${s.kind} Step`, (d) => (P(d, p.id).steps = P(d, p.id).steps.filter((x) => x.id !== s.id)), p.id)
+              nav({ step: undefined }, true)
+            }}
+          >
+            Delete Step
+          </button>
+          <button className="rounded border px-2" onClick={() => setDeleting(false)}>
+            Keep it
+          </button>
+        </div>
+      </div>
+      )}
       {dirty && <div className="text-xs text-amber-700">Unsaved changes: ✓ or click outside saves, ✕ discards.</div>}
       <div className="flex flex-wrap gap-2">
         {(['Planned', 'Done', 'Cancelled'] as StepState[]).map((st) => (
@@ -487,37 +518,6 @@ function StepDetail({ p, s }: { p: Process; s: Step }) {
             Add
           </button>
         </div>
-      </div>
-      <div className="border-t pt-2 text-xs">
-        {s.origin ? (
-          <span className="text-slate-400">The Origin can’t be deleted: every Process has exactly one.</span>
-        ) : !deleting ? (
-          <button className="rounded border border-red-300 px-2 text-red-700" onClick={() => setDeleting(true)}>
-            Delete Step…
-          </button>
-        ) : (
-          <div className="rounded border-2 border-red-400 bg-red-50 p-2">
-            <div className="font-semibold">Delete this {s.kind} Step for good?</div>
-            <div className="mt-1">
-              Everything on it will be lost: its day and state, who took part, Step prep notes, the Reflection, {s.feedback.length} Feedback and {s.docs.length} Document attachment
-              {s.docs.length !== 1 && 's'}. The Documents themselves stay in rolegraph. If it just won’t happen, mark it Cancelled instead.
-            </div>
-            <div className="mt-2 flex gap-2">
-              <button
-                className="rounded bg-red-600 px-2 text-white"
-                onClick={() => {
-                  write(`delete ${s.kind} Step`, (d) => (P(d, p.id).steps = P(d, p.id).steps.filter((x) => x.id !== s.id)), p.id)
-                  nav({ step: undefined }, true)
-                }}
-              >
-                Delete Step
-              </button>
-              <button className="rounded border px-2" onClick={() => setDeleting(false)}>
-                Keep it
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
