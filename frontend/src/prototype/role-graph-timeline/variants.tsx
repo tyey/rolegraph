@@ -124,7 +124,9 @@ export function VariantC() {
       <header className="flex h-12 shrink-0 items-center gap-2 border-b bg-white px-4">
         <button className="flex items-center gap-2" onClick={() => nav({ role: undefined, process: undefined, person: undefined, q: undefined, tab: undefined, step: undefined })}>
           <Logo />
-          <span className="text-lg font-semibold tracking-tight text-slate-900">rolegraph</span>
+          <span className="text-xl font-extrabold lowercase tracking-tight text-slate-900" style={{ fontFamily: 'Nunito, ui-rounded, system-ui, sans-serif' }}>
+            candidacy
+          </span>
         </button>
         <div className="ml-auto flex items-center gap-1 text-sm">
           <HeaderPanel label="Help">
@@ -138,7 +140,7 @@ export function VariantC() {
             <div className="mt-3 border-t pt-2 text-slate-500">Full glossary: CONTEXT.md · Runbook: README.md</div>
           </HeaderPanel>
           <HeaderPanel label="About">
-            <div className="font-semibold">rolegraph 0.1.0 (prototype)</div>
+            <div className="font-semibold">Candidacy 0.1.0 (prototype)</div>
             <div className="mt-1 text-slate-600">A personal tracker of interview Processes, organised as a graph of Roles.</div>
             <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-slate-600">
               <dt className="text-slate-500">Data</dt>
@@ -198,14 +200,12 @@ export function VariantC() {
   )
 }
 
-/** Placeholder mark: a tiny DAG (two parents, one child). */
+/** Placeholder mark for Candidacy: a check in a circle. */
 function Logo() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M6 6 12 18M18 6 12 18" stroke="#6366f1" strokeWidth="2" fill="none" />
-      <circle cx="6" cy="6" r="3.2" fill="#4f46e5" />
-      <circle cx="18" cy="6" r="3.2" fill="#4f46e5" />
-      <circle cx="12" cy="18" r="3.2" fill="#a5b4fc" stroke="#4f46e5" strokeWidth="1.5" />
+    <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="10.5" fill="#4f46e5" />
+      <path d="m7.5 12.5 3 3 6-6.5" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </svg>
   )
 }
