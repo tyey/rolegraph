@@ -320,36 +320,64 @@ export function ListsPanel() {
   )
 }
 
+/** One row per Person × organisation they spoke for (a recruiter seen at two Companies gets two rows). */
 export function PeopleList() {
   const { db, nav, search } = useStore()
   const [picked, setPicked] = useState<string[]>([])
+  const [org, setOrg] = useState('')
   const dupOf = (id: string) => {
     const me = db.persons.find((x) => x.id === id)!
     return db.persons.filter((x) => x.id !== id && x.links.some((l) => me.links.includes(l)))
   }
-  const rows = [...db.persons].sort((a, b) => Number(dupOf(b.id).length > 0) - Number(dupOf(a.id).length > 0) || personName(db, a.id).localeCompare(personName(db, b.id)))
+  type Row = { personId: string; org: string; side: string; parts: Set<string>; dm: boolean; processes: number }
+  const rows: Row[] = []
+  for (const x of db.persons) {
+    const mine = new Map<string, Row>()
+    for (const p of db.processes)
+      for (const pt of p.participants.filter((y) => y.personId === x.id)) {
+        const o = pt.side === 'Agency' ? (agencyName(db, p) ?? '?') : pt.side === 'none' ? '' : companyName(db, p)
+        const r = mine.get(o) ?? { personId: x.id, org: o, side: pt.side, parts: new Set<string>(), dm: false, processes: 0 }
+        pt.parts.forEach((t) => r.parts.add(t))
+        r.dm ||= pt.decisionMaker
+        r.processes++
+        mine.set(o, r)
+      }
+    rows.push(...(mine.size ? mine.values() : [{ personId: x.id, org: '', side: 'none', parts: new Set<string>(), dm: false, processes: 0 }]))
+  }
+  const orgs = [...new Set(rows.map((r) => r.org).filter(Boolean))].sort()
+  const shown = rows
+    .filter((r) => !org || r.org === org)
+    .sort((a, b) => (a.org || '￿').localeCompare(b.org || '￿') || personName(db, a.personId).localeCompare(personName(db, b.personId)))
   return (
     <div className="space-y-3 p-4 text-sm">
       <div className="flex items-center gap-3">
         <h2 className="text-lg font-bold">People</h2>
+        <select className="rounded border text-xs" value={org} onChange={(e) => setOrg(e.target.value)}>
+          <option value="">All Companies & Agencies</option>
+          {orgs.map((o) => (
+            <option key={o}>{o}</option>
+          ))}
+        </select>
         <span className="text-xs text-slate-500">Tick two to Merge them.</span>
       </div>
       <table className="w-full text-xs">
         <thead className="text-left text-slate-500">
           <tr>
             <th className="w-6" />
+            <th>Company / Agency</th>
             <th>Person</th>
-            <th>Profile links</th>
+            <th>Parts</th>
             <th>Processes</th>
+            <th>Profile links</th>
             <th />
           </tr>
         </thead>
         <tbody>
-          {rows.map((x) => {
-            const n = db.processes.filter((p) => p.participants.some((pt) => pt.personId === x.id)).length
+          {shown.map((r) => {
+            const x = db.persons.find((y) => y.id === r.personId)!
             const dups = dupOf(x.id)
             return (
-              <tr key={x.id} className={`border-t ${search.person === x.id ? 'bg-indigo-100' : dups.length ? 'bg-amber-50' : ''}`}>
+              <tr key={x.id + r.org} className={`border-t ${search.person === x.id ? 'bg-indigo-100' : dups.length ? 'bg-amber-50' : ''}`}>
                 <td>
                   <input
                     type="checkbox"
@@ -359,13 +387,21 @@ export function PeopleList() {
                   />
                 </td>
                 <td className="py-1">
+                  {r.org || <span className="text-slate-400">— no one</span>}
+                  {r.side !== 'Company' && r.org && <span className="ml-1 text-[10px] text-slate-400">{r.side}</span>}
+                </td>
+                <td>
                   <button className="underline" onClick={() => nav({ person: x.id, tab: undefined })}>
                     {personName(db, x.id)}
                   </button>
                   {!x.name && <span className="ml-1 rounded bg-slate-200 px-1 text-[10px]">placeholder</span>}
                 </td>
+                <td>
+                  {[...r.parts].join(', ') || '—'}
+                  {r.dm && <span className="ml-1 text-amber-700">⚖︎ Decision maker</span>}
+                </td>
+                <td>{r.processes}</td>
                 <td className="text-slate-500">{x.links.join(', ') || '—'}</td>
-                <td>{n}</td>
                 <td className="text-amber-700">{dups.length > 0 && `possible duplicate of ${dups.map((d) => personName(db, d.id)).join(', ')}`}</td>
               </tr>
             )
