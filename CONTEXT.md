@@ -127,3 +127,19 @@ _Avoid_: Combine, dedupe
 **Reclassify**:
 Moving a Process from one Role to another.
 _Avoid_: Recategorise, re-tag
+
+**Backup**:
+A complete copy of all of the candidate's data at one moment, Documents included. One is made automatically for each day on which anything was added or changed, and others whenever the candidate asks and before every upgrade or Restore. Only the 14 most recent automatic Backups are kept; the ones the candidate asked for and the ones made before an upgrade or Restore are always kept.
+_Avoid_: Snapshot, export, dump, sync
+
+**Restore**:
+Replacing all of the candidate's data with a Backup. Nothing is merged, and the data being replaced is backed up first.
+_Avoid_: Import, rollback, merge
+
+**Demo data**:
+A made-up set of Roles, Processes, Companies, Agencies, People and Documents, kept wholly apart from the candidate's own data, for showing rolegraph to others or trying it out. A browser in **demo mode** sees and edits only Demo data, which can be reset to its starting set at any time and is never backed up.
+_Avoid_: Sample data, test data, sandbox
+
+**Graph export**:
+A one-way file holding all of the candidate's data as nodes and edges, for exploring in a graph tool. It can't be Restored.
+_Avoid_: Graph backup, Neo4j export
