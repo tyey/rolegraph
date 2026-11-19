@@ -11,4 +11,4 @@ Uploading writes the file first. That is idempotent, because the name is the has
 
 ## Consequences
 
-- A snapshot is the database **plus** the `documents/` directory. Because the files never change, copying them after a backup-API snapshot of the database is consistent. The format is decided in "Local runtime, data directory & export/import".
+- A snapshot is the database **plus** the `documents/` directory. Because the files never change, copying them after a backup-API snapshot of the database is consistent. The Backup format is ADR 0010.

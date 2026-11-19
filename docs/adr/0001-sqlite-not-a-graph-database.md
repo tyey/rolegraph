@@ -11,4 +11,4 @@ rolegraph's data reads like a network: Roles in a DAG, and Persons, Processes, C
 ## Consequences
 
 - Moving to a graph store later means rewriting every repository and query service, which is why this is recorded.
-- The graph export's format (Cypher script, GraphML or CSV pairs) is decided with the snapshot format in "Local runtime, data directory & export/import".
+- The graph export is GraphML, generated on demand (ADR 0010).
