@@ -33,7 +33,7 @@ How a closed Process ended, as set by the candidate: **Accepted** (took the offe
 _Avoid_: Result, resolution, verdict
 
 **Company**:
-The organisation that would employ the candidate. It is shared by all Processes with that organisation, which links them into one history. It has one current name and may have **aliases**: former or brand names it is also known by.
+The organisation that would employ the candidate. It is shared by all Processes with that organisation, which links them into one history. It has one current name and may have **aliases**: former or brand names it is also known by. A new Company whose name or alias already belongs to another Company is offered as a match for it, as with a Person's Profile link.
 _Avoid_: Employer, client, organisation
 
 **Talent team**:
@@ -41,7 +41,7 @@ A Company's own in-house recruiting team. It belongs to exactly one Company, and
 _Avoid_: Internal agency, HR, in-house recruiters
 
 **Agency**:
-An independent recruiting firm that introduces the candidate to Companies. It can work with any number of Companies, and a Process goes through at most one Agency.
+An independent recruiting firm that introduces the candidate to Companies. It can work with any number of Companies, and a Process goes through at most one Agency. A new Agency whose name already belongs to another Agency is offered as a match for it, as with a Company.
 _Avoid_: Headhunter, external recruiter, recruitment firm
 
 ### People
@@ -51,7 +51,7 @@ A human the candidate deals with during recruitment, such as a recruiter, an int
 _Avoid_: Contact, recruiter (for the general case)
 
 **Profile link**:
-A way to reach or recognise a Person, such as a LinkedIn profile URL or an email address. A Person has any number of them. A new Person whose Profile link already belongs to another Person is offered as a match for that Person, while a similar name is only suggested; the candidate decides, and two Persons found to be one human are Merged. Several Persons can share a Profile link, such as a shared hiring inbox, so a match is only offered, never forced. When the candidate says two Persons are different humans, that pair is never offered or suggested again, and the mark passes to the survivor of any later Merge.
+A way to reach or recognise a Person, such as a LinkedIn profile URL or an email address. A Person has any number of them. A new Person whose Profile link already belongs to another Person is offered as a match for that Person, while a similar name is only suggested; the candidate decides, and two Persons found to be one human are Merged. Several Persons can share a Profile link, such as a shared hiring inbox, so a match is only offered, never forced. When the candidate says two Persons are different humans, that pair is never offered or suggested again, and the mark passes to the survivor of any later Merge. The same holds for two Companies or two Agencies the candidate says are not the same.
 _Avoid_: Contact details, handle, identifier
 
 **Participant**:
