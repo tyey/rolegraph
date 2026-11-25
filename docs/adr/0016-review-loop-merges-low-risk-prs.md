@@ -1,5 +1,7 @@
 # The review loop merges low-risk PRs; risk classes go to the human
 
+> Amended by ADR 0018: the risk globs live in CODEOWNERS, GitHub requires the human's code-owner review on them, and the factory has its own GitHub user.
+
 The factory's review loop (ADR 0015) may merge a PR, but only through GitHub auto-merge and only outside the risk classes. Earlier research concluded that nothing Claude-side merges. This ADR replaces that with a narrower rule: an agent may *ask* GitHub to merge, and GitHub still merges only once every required check has passed.
 
 **The rule.** After a `review:approved` verdict, the review script, not the reviewer session, checks the PR:
