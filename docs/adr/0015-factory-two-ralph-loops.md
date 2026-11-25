@@ -1,5 +1,7 @@
 # The factory is two Ralph loops on the laptop: implement and review
 
+> Amended by ADR 0018: the loops act as a dedicated factory GitHub user, not the developer's own. ADRs 0017 and 0018 add the `main-red` fix ticket and the rebase flow.
+
 The software factory is **two bash loops in the Ralph style**, running on the developer's laptop under their Claude subscription login: `./factory implement` and `./factory review`. Each one is a thin shell script over `gh` and `claude -p`. Each pass starts a fresh headless session, so context never builds up across tickets. When a loop has nothing to take, it sleeps (about 5 minutes) and polls again. Ctrl-C stops it between passes. There is no daemon.
 
 Every run uses `--permission-mode auto --permission-prompts none` with `--max-budget-usd` and `--max-turns` caps, and returns a JSON status. Runs never use `--bare`, because the project skills and hooks must load. `ANTHROPIC_API_KEY` stays unset, so usage stays on the subscription.
